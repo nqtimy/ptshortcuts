@@ -1,0 +1,169 @@
+{
+  "certification": "205D",
+  "categories": [
+    {
+      "name": "Dashboard & Admin",
+      "shortcuts": [
+        {
+          "command_name": "Dashboard Window",
+          "keys_win": ["Alt", "D"],
+          "keys_mac": ["Option", "D"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 8
+        },
+        {
+          "command_name": "System Usage",
+          "keys_win": ["Alt", "S"],
+          "keys_mac": ["Option", "S"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "Disk Space Window",
+          "keys_win": ["Alt", "Shift", "D"],
+          "keys_mac": ["Option", "Shift", "D"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Workspace Browser",
+          "keys_win": ["Alt", ";"],
+          "keys_mac": ["Option", ";"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Catalog Browser",
+          "keys_win": ["Alt", "Shift", ";"],
+          "keys_mac": ["Option", "Shift", ";"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": null,
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Collaboration",
+      "shortcuts": [
+        {
+          "command_name": "Import Session Data",
+          "keys_win": ["Ctrl", "Shift", "I"],
+          "keys_mac": ["Command", "Shift", "I"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 8
+        },
+        {
+          "command_name": "Export Session Info",
+          "keys_win": ["Ctrl", "Shift", "E"],
+          "keys_mac": ["Command", "Shift", "E"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "Track Versions",
+          "keys_win": ["Ctrl", "Shift", "Alt", "V"],
+          "keys_mac": ["Command", "Shift", "Option", "V"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Copy to Send",
+          "keys_win": ["Ctrl", "Alt", "S"],
+          "keys_mac": ["Command", "Option", "S"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": "Cloud Collaboration",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Preferences",
+      "shortcuts": [
+        {
+          "command_name": "Preferences Window",
+          "keys_win": ["Ctrl", "Shift", ","],
+          "keys_mac": ["Command", "Shift", ","],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "Edit Keyboard Shortcuts",
+          "keys_win": ["Ctrl", "Alt", "K"],
+          "keys_mac": ["Command", "Option", "K"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Reset Preferences",
+          "keys_win": ["Ctrl", "Shift", "Alt", "P"],
+          "keys_mac": ["Command", "Shift", "Option", "P"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": "Au lancement de Pro Tools",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Session Management",
+      "shortcuts": [
+        {
+          "command_name": "Save Copy In",
+          "keys_win": ["Ctrl", "Alt", "S"],
+          "keys_mac": ["Command", "Option", "S"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "Revert to Saved",
+          "keys_win": ["Ctrl", "Shift", "R"],
+          "keys_mac": ["Command", "Shift", "R"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Project Browser",
+          "keys_win": ["Alt", "O"],
+          "keys_mac": ["Option", "O"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Clear Unused Clips",
+          "keys_win": ["Ctrl", "Shift", "Alt", "U"],
+          "keys_mac": ["Command", "Shift", "Option", "U"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": "Clip List",
+          "weight": 3
+        }
+      ]
+    }
+  ]
+}

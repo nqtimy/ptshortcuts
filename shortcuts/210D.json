@@ -1,0 +1,178 @@
+{
+  "certification": "210D",
+  "categories": [
+    {
+      "name": "System Config",
+      "shortcuts": [
+        {
+          "command_name": "Playback Engine",
+          "keys_win": ["Alt", "Shift", "P"],
+          "keys_mac": ["Option", "Shift", "P"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 8
+        },
+        {
+          "command_name": "Hardware Setup",
+          "keys_win": ["Alt", "Shift", "H"],
+          "keys_mac": ["Option", "Shift", "H"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "I/O Setup",
+          "keys_win": ["Alt", "Shift", "I"],
+          "keys_mac": ["Option", "Shift", "I"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "MIDI Studio Setup",
+          "keys_win": ["Alt", "Shift", "M"],
+          "keys_mac": ["Option", "Shift", "M"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Peripherals Setup",
+          "keys_win": ["Ctrl", "Alt", "Shift", ";"],
+          "keys_mac": ["Command", "Option", "Shift", ";"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": null,
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Advanced Mixing",
+      "shortcuts": [
+        {
+          "command_name": "Narrow Mix View",
+          "keys_win": ["Ctrl", "Alt", "M"],
+          "keys_mac": ["Command", "Option", "M"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": "Mix Window",
+          "weight": 7
+        },
+        {
+          "command_name": "Show All Tracks",
+          "keys_win": ["Alt", "Shift", "T"],
+          "keys_mac": ["Option", "Shift", "T"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "VCA Master Track",
+          "keys_win": ["Ctrl", "Shift", "Alt", "N"],
+          "keys_mac": ["Command", "Shift", "Option", "N"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": "Nouvelle piste VCA",
+          "weight": 4
+        },
+        {
+          "command_name": "Clear All Clips",
+          "keys_win": ["Ctrl", "Shift", "Alt", "B"],
+          "keys_mac": ["Command", "Shift", "Option", "B"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": "Clip List",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Surround",
+      "shortcuts": [
+        {
+          "command_name": "Output Panner",
+          "keys_win": ["Alt", "P"],
+          "keys_mac": ["Option", "P"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": "Surround Track",
+          "weight": 7
+        },
+        {
+          "command_name": "Surround Meter",
+          "keys_win": ["Alt", "Shift", "S"],
+          "keys_mac": ["Option", "Shift", "S"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 5
+        },
+        {
+          "command_name": "Divergence Control",
+          "keys_win": ["Ctrl", "Alt", "D"],
+          "keys_mac": ["Command", "Option", "D"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": "Surround Panner",
+          "weight": 4
+        },
+        {
+          "command_name": "LFE Enable",
+          "keys_win": ["Ctrl", "Shift", "Alt", "L"],
+          "keys_mac": ["Command", "Shift", "Option", "L"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": "Surround Track",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Network & Cloud",
+      "shortcuts": [
+        {
+          "command_name": "Satellite Link",
+          "keys_win": ["Ctrl", "Alt", "L"],
+          "keys_mac": ["Command", "Option", "L"],
+          "input_type": "key_combo",
+          "difficulty": 1,
+          "context": null,
+          "weight": 7
+        },
+        {
+          "command_name": "Satellite Admin",
+          "keys_win": ["Ctrl", "Shift", "Alt", "A"],
+          "keys_mac": ["Command", "Shift", "Option", "A"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 4
+        },
+        {
+          "command_name": "Video Satellite",
+          "keys_win": ["Ctrl", "Shift", "V"],
+          "keys_mac": ["Command", "Shift", "V"],
+          "input_type": "key_combo",
+          "difficulty": 2,
+          "context": null,
+          "weight": 4
+        },
+        {
+          "command_name": "Cloud Sync Status",
+          "keys_win": ["Alt", "Shift", "C"],
+          "keys_mac": ["Option", "Shift", "C"],
+          "input_type": "key_combo",
+          "difficulty": 3,
+          "context": null,
+          "weight": 2
+        }
+      ]
+    }
+  ]
+}

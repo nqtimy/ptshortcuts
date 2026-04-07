@@ -1,0 +1,1233 @@
+{
+  "certification": "110",
+  "categories": [
+    {
+      "name": "Lesson 1",
+      "shortcuts": [
+        {
+          "command_name": "New Session",
+          "context": "Create a new session.",
+          "keys_mac": [
+            "Command",
+            "N"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "N"
+          ],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 10
+        },
+        {
+          "command_name": "Open Transport Window",
+          "context": "Display the Transport window.",
+          "keys_mac": [
+            "Command",
+            "Numpad 2"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Numpad 2"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Select All Paths in I/O Tab",
+          "context": "Select all paths in the current I/O Setup tab.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        }
+      ]
+    },
+    {
+      "name": "Lesson 2",
+      "shortcuts": [
+        {
+          "command_name": "Cycle Zoom Tool Modes",
+          "context": "Toggle between the two Zoom tool modes.",
+          "keys_mac": [
+            "F5"
+          ],
+          "keys_win": [
+            "F5"
+          ],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Activate Main Counter",
+          "context": "Activate the Main Counter to type a location (numeric keypad).",
+          "keys_mac": [
+            "Num*"
+          ],
+          "keys_win": [
+            "Num*"
+          ],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
+        },
+        {
+          "command_name": "Activate Sub Counter",
+          "context": "Activate the Edit Selection Start field to type a location (numeric keypad).",
+          "keys_mac": [
+            "Num/"
+          ],
+          "keys_win": [
+            "Num/"
+          ],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
+        },
+        {
+          "command_name": "Create Memory Location",
+          "context": "Create a new Memory Location at the current position (numeric keypad).",
+          "keys_mac": [
+            "Enter"
+          ],
+          "keys_win": [
+            "Enter"
+          ],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Slide Timeline Selection",
+          "context": "Slide the in or out point of a Timeline selection to move it in time while preserving its length.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Memory Locations Window",
+          "context": "Open the Memory Locations window (numeric keypad).",
+          "keys_mac": [
+            "Command",
+            "Num5"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Num5"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Recall Memory Location",
+          "context": "Recall a Memory Location by its number (numeric keypad).",
+          "keys_mac": [
+            [
+              "Num."
+            ],
+            [
+              "AnyDigit"
+            ],
+            [
+              "Num."
+            ]
+          ],
+          "keys_win": [
+            [
+              "Num."
+            ],
+            [
+              "AnyDigit"
+            ],
+            [
+              "Num."
+            ]
+          ],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 5,
+          "absorb_steps": [
+            1
+          ]
+        },
+        {
+          "command_name": "Add Ruler Marker",
+          "context": "Click in a ruler to add a marker at the cursor position.",
+          "keys_mac": [
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Edit Memory Location",
+          "context": "Right-click on a Memory Location to edit it.",
+          "keys_mac": [
+            "Control",
+            "Right-Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Right-Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Close All Floating Windows",
+          "context": "Close all floating windows in the session.",
+          "keys_mac": [
+            "Control",
+            "Option",
+            "Command",
+            "W"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Start",
+            "Alt",
+            "W"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        },
+        {
+          "command_name": "Create Window Configuration",
+          "context": "Create a new numbered Window Configuration (numeric keypad).",
+          "keys_mac": [
+            [
+              "Num."
+            ],
+            [
+              "AnyDigit"
+            ],
+            [
+              "Num+"
+            ]
+          ],
+          "keys_win": [
+            [
+              "Num."
+            ],
+            [
+              "AnyDigit"
+            ],
+            [
+              "Num+"
+            ]
+          ],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 5,
+          "absorb_steps": [
+            1
+          ]
+        },
+        {
+          "command_name": "Recall Window Configuration",
+          "context": "Recall a saved Window Configuration by its number (numeric keypad).",
+          "keys_mac": [
+            [
+              "Num."
+            ],
+            [
+              "AnyDigit"
+            ],
+            [
+              "Num*"
+            ]
+          ],
+          "keys_win": [
+            [
+              "Num."
+            ],
+            [
+              "AnyDigit"
+            ],
+            [
+              "Num*"
+            ]
+          ],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 5,
+          "absorb_steps": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lesson 3",
+      "shortcuts": [
+        {
+          "command_name": "New Audio Track from Empty Space",
+          "context": "Create a new audio track by double-clicking in an empty space.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "New Instrument Track from Empty Space",
+          "context": "Create a new Instrument track by double-clicking in an empty space.",
+          "keys_mac": [
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Import Audio from Empty Space",
+          "context": "Import audio by double-clicking in an empty space.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Import MIDI from Empty Space",
+          "context": "Import MIDI by double-clicking in an empty space.",
+          "keys_mac": [
+            "Shift",
+            "Click"
+          ],
+          "keys_win": [
+            "Shift",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Store Batch Rename Preset",
+          "context": "Store the current batch rename settings to a preset button.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Scroll Track Into View",
+          "context": "Scroll a track into view in both the Mix and Edit windows.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 4",
+      "shortcuts": [
+        {
+          "command_name": "Audition Clip",
+          "context": "Preview a clip by clicking on it in the Edit window.",
+          "keys_mac": [
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Create Clip Group",
+          "context": "Group selected clips into a Clip Group.",
+          "keys_mac": [
+            "Option",
+            "Command",
+            "G"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Alt",
+            "G"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Ungroup Clip Group",
+          "context": "Ungroup a Clip Group.",
+          "keys_mac": [
+            "Option",
+            "Command",
+            "U"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Alt",
+            "U"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Regroup Clip Group",
+          "context": "Regroup a previously ungrouped Clip Group.",
+          "keys_mac": [
+            "Option",
+            "Command",
+            "R"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Alt",
+            "R"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        }
+      ]
+    },
+    {
+      "name": "Lesson 5",
+      "shortcuts": [
+        {
+          "command_name": "Freeze All Tracks",
+          "context": "Freeze all tracks in the session at once.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Freeze Selected Tracks",
+          "context": "Freeze all selected tracks at once.",
+          "keys_mac": [
+            "Shift",
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Shift",
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Store Bounce Preset",
+          "context": "Store the current bounce settings to a preset button.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Fine Fader Control",
+          "context": "Adjust a fader with fine control resolution.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Show Clip Gain Info",
+          "context": "Display the Clip Gain info view.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "="
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "="
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Show Clip Gain Line",
+          "context": "Display the Clip Gain line view.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "-"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "-"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Nudge Clip Gain Up",
+          "context": "Nudge Clip Gain breakpoints higher.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Up Arrow"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Up Arrow"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        },
+        {
+          "command_name": "Nudge Clip Gain Down",
+          "context": "Nudge Clip Gain breakpoints lower.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Down Arrow"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Down Arrow"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        },
+        {
+          "command_name": "Nudge Breakpoint Later",
+          "context": "Move Clip Gain breakpoints later by the nudge value (numeric keypad).",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Num+"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Num+"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        },
+        {
+          "command_name": "Nudge Breakpoint Earlier",
+          "context": "Move Clip Gain breakpoints earlier by the nudge value (numeric keypad).",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Num-"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Num-"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        },
+        {
+          "command_name": "Remove Elastic Audio Event",
+          "context": "Remove an Elastic Audio event marker with the Pencil tool.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Place Warp Marker",
+          "context": "Place a Warp Marker at the desired location using the Grabber tool.",
+          "keys_mac": [
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Remove Warp Marker",
+          "context": "Remove a Warp Marker using the Pencil tool.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 6",
+      "shortcuts": [
+        {
+          "command_name": "Import to New Track from Browser",
+          "context": "Import a file from a browser directly to a new track.",
+          "keys_mac": [
+            "Shift",
+            "Click"
+          ],
+          "keys_win": [
+            "Shift",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Import Session Data",
+          "context": "Open the Import Session Data dialog.",
+          "keys_mac": [
+            "Shift",
+            "Option",
+            "I"
+          ],
+          "keys_win": [
+            "Shift",
+            "Alt",
+            "I"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "New Track from Track Menu",
+          "context": "Create a new track from any track pop-up menu.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Store Import Preset",
+          "context": "Store the current import settings to a preset button.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 7",
+      "shortcuts": [
+        {
+          "command_name": "Trim to Selection",
+          "context": "Trim a clip to the current edit selection.",
+          "keys_mac": [
+            "Command",
+            "T"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "T"
+          ],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        },
+        {
+          "command_name": "Cycle Grabber Tools",
+          "context": "Cycle through the different Grabber tool modes.",
+          "keys_mac": [
+            "F8"
+          ],
+          "keys_win": [
+            "F8"
+          ],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Copy Clip with Drag",
+          "context": "Duplicate a clip by dragging it to a new location.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Dynamic Transport",
+          "context": "Enable or disable Dynamic Transport mode.",
+          "keys_mac": [
+            "Control",
+            "Command",
+            "P"
+          ],
+          "keys_win": [
+            "Start",
+            "Ctrl",
+            "P"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Store Plug-in Preset",
+          "context": "Store current plug-in settings to a preset button.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Save Plug-in Settings",
+          "context": "Save settings for the currently targeted plug-in.",
+          "keys_mac": [
+            "Shift",
+            "Command",
+            "S"
+          ],
+          "keys_win": [
+            "Shift",
+            "Ctrl",
+            "S"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Create Group",
+          "context": "Create a new mix or edit group.",
+          "keys_mac": [
+            "Command",
+            "G"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "G"
+          ],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        }
+      ]
+    },
+    {
+      "name": "Lesson 8",
+      "shortcuts": [
+        {
+          "command_name": "Audition Clip from Clips List",
+          "context": "Preview a clip by clicking on it in the Clips List.",
+          "keys_mac": [
+            "Option",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Open Soundbase",
+          "context": "Open the Soundbase browser window.",
+          "keys_mac": [
+            "Control",
+            "="
+          ],
+          "keys_win": [
+            "Start",
+            "="
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Resize Automation Lane",
+          "context": "Increase or decrease the height of an automation lane containing the edit cursor.",
+          "keys_mac": [
+            "Control",
+            "Up/Down Arrow"
+          ],
+          "keys_win": [
+            "Start",
+            "Up/Down Arrow"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        },
+        {
+          "command_name": "Adjust Automation Value",
+          "context": "Adjust the value of selected automation breakpoints.",
+          "keys_mac": [
+            "Shift",
+            "Up/Down Arrow"
+          ],
+          "keys_win": [
+            "Shift",
+            "Up/Down Arrow"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 9",
+      "shortcuts": [
+        {
+          "command_name": "Open MIDI Editor",
+          "context": "Open the MIDI Editor window (numeric keypad).",
+          "keys_mac": [
+            "Command",
+            "Num9"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Num9"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Align Clip Start to Cursor",
+          "context": "Align the start of a clip to the edit cursor using the Grabber tool.",
+          "keys_mac": [
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Align Clip End to Cursor",
+          "context": "Align the end of a clip to the edit cursor using the Grabber tool.",
+          "keys_mac": [
+            "Control",
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Add Sync Point",
+          "context": "Add a sync point at the current cursor location within a clip.",
+          "keys_mac": [
+            "Command",
+            ","
+          ],
+          "keys_win": [
+            "Ctrl",
+            ","
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Align Sync Point to Cursor",
+          "context": "Align a clip's sync point to the edit cursor using the Grabber tool.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Store Plug-in Settings Preset",
+          "context": "Store the current plug-in settings to a preset button.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 10",
+      "shortcuts": [
+        {
+          "command_name": "Expand Send in Mixer",
+          "context": "Expand a send to show its controls in the Mix window.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Automation Window",
+          "context": "Open the Automation window (numeric keypad).",
+          "keys_mac": [
+            "Command",
+            "Num4"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Num4"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Consolidate Clip",
+          "context": "Consolidate the current selection into a single clip.",
+          "keys_mac": [
+            "Command",
+            "B"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "B"
+          ],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        },
+        {
+          "command_name": "Cut",
+          "context": "Cut the current selection to the clipboard.",
+          "keys_mac": [
+            "Command",
+            "X"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "X"
+          ],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        },
+        {
+          "command_name": "Clear Special",
+          "context": "Delete the current selection using the Start modifier.",
+          "keys_mac": [
+            "Control",
+            "Delete"
+          ],
+          "keys_win": [
+            "Start",
+            "Delete"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Nudge Automation Later",
+          "context": "Move selected automation breakpoints later by the nudge value (numeric keypad).",
+          "keys_mac": [
+            "Num+"
+          ],
+          "keys_win": [
+            "Num+"
+          ],
+          "difficulty": 3,
+          "input_type": "single_key",
+          "weight": 3
+        },
+        {
+          "command_name": "Nudge Automation Earlier",
+          "context": "Move selected automation breakpoints earlier by the nudge value (numeric keypad).",
+          "keys_mac": [
+            "Num-"
+          ],
+          "keys_win": [
+            "Num-"
+          ],
+          "difficulty": 3,
+          "input_type": "single_key",
+          "weight": 3
+        },
+        {
+          "command_name": "Suspend Track Automation",
+          "context": "Suspend the displayed automation parameter on a single track.",
+          "keys_mac": [
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Suspend All Tracks Automation",
+          "context": "Suspend the displayed automation parameter on all tracks.",
+          "keys_mac": [
+            "Option",
+            "Command",
+            "Click"
+          ],
+          "keys_win": [
+            "Alt",
+            "Ctrl",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Isolate Parameter from Group",
+          "context": "Temporarily isolate a parameter from group control while adjusting it.",
+          "keys_mac": [
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Start",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Show Group Members",
+          "context": "Add the tracks of a group to the current display.",
+          "keys_mac": [
+            "Shift",
+            "Control",
+            "Click"
+          ],
+          "keys_win": [
+            "Shift",
+            "Start",
+            "Click"
+          ],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Suspend All Groups",
+          "context": "Suspend all groups at once.",
+          "keys_mac": [
+            "Shift",
+            "Command",
+            "U"
+          ],
+          "keys_win": [
+            "Shift",
+            "Ctrl",
+            "U"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Bounce Track",
+          "context": "Open the Track Bounce dialog.",
+          "keys_mac": [
+            "Shift",
+            "Command",
+            "B"
+          ],
+          "keys_win": [
+            "Shift",
+            "Ctrl",
+            "B"
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Batch Analyze Audio",
+          "context": "Batch analyze selected audio clips.",
+          "keys_mac": [
+            "Shift",
+            "Command",
+            "A"
+          ],
+          "keys_win": [
+            "Shift",
+            "Ctrl",
+            "A"
+          ],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 3
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,432 @@
+{
+  "certification": "130",
+  "categories": [
+    {
+      "name": "Lesson 1",
+      "shortcuts": [
+        {
+          "command_name": "New Tracks",
+          "context": "Open the New Tracks dialog box.",
+          "keys_mac": ["Command", "Shift", "N"],
+          "keys_win": ["Ctrl", "Shift", "N"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        },
+        {
+          "command_name": "Smart Tool (F6+F7)",
+          "context": "Enable the Smart Tool using the first key combination.",
+          "keys_mac": ["F6", "F7"],
+          "keys_win": ["F6", "F7"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 7
+        },
+        {
+          "command_name": "Smart Tool (F7+F8)",
+          "context": "Enable the Smart Tool using the second key combination.",
+          "keys_mac": ["F7", "F8"],
+          "keys_win": ["F7", "F8"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 7
+        },
+        {
+          "command_name": "Tab to Transients",
+          "context": "Toggle the Tab to Transients mode on or off.",
+          "keys_mac": ["Option", "Command", "Tab"],
+          "keys_win": ["Ctrl", "Alt", "Tab"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 7
+        },
+        {
+          "command_name": "Consolidate",
+          "context": "Consolidate the current selection into a single clip.",
+          "keys_mac": ["Option", "Shift", "3"],
+          "keys_win": ["Alt", "Shift", "3"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 7
+        },
+        {
+          "command_name": "Bounce Track",
+          "context": "Initiate the Track Bounce function.",
+          "keys_mac": ["Option", "Command", "Shift", "B"],
+          "keys_win": ["Ctrl", "Alt", "Shift", "B"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Commit Tracks",
+          "context": "Open the Commit Tracks dialog box.",
+          "keys_mac": ["Option", "Shift", "C"],
+          "keys_win": ["Alt", "Shift", "C"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        }
+      ]
+    },
+    {
+      "name": "Lesson 2",
+      "shortcuts": [
+        {
+          "command_name": "Insertion Follows Playback",
+          "context": "In Commands Keyboard Focus mode, toggle Insertion Follows Playback on or off.",
+          "keys_mac": [["Command", "Alt", "1"], ["N"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["N"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 6
+        },
+        {
+          "command_name": "Capture Selection",
+          "context": "Use the Capture command to store the current selection as a region.",
+          "keys_mac": ["Command", "R"],
+          "keys_win": ["Ctrl", "R"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 7
+        },
+        {
+          "command_name": "Export Clips as Files",
+          "context": "Export the currently selected clips as separate audio files.",
+          "keys_mac": ["Command", "Shift", "K"],
+          "keys_win": ["Ctrl", "Shift", "K"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        }
+      ]
+    },
+    {
+      "name": "Lesson 3",
+      "shortcuts": [
+        {
+          "command_name": "Trim Clip Start",
+          "context": "In Edit window Keyboard Focus mode, trim the clip start to the insertion point.",
+          "keys_mac": [["Command", "Alt", "1"], ["A"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["A"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 7
+        },
+        {
+          "command_name": "Trim Clip End",
+          "context": "In Edit window Keyboard Focus mode, trim the clip end to the insertion point.",
+          "keys_mac": [["Command", "Alt", "1"], ["S"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["S"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 7
+        },
+        {
+          "command_name": "Separate Clip",
+          "context": "In Edit window Keyboard Focus mode, separate a clip at the selection boundaries or edit cursor location.",
+          "keys_mac": [["Command", "Alt", "1"], ["B"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["B"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 7
+        },
+        {
+          "command_name": "Nudge Backward",
+          "context": "In Edit window Keyboard Focus mode, nudge the selection backward by the current Nudge Value.",
+          "keys_mac": [["Command", "Alt", "1"], [","]],
+          "keys_win": [["Ctrl", "Alt", "1"], [","]],
+          "difficulty": 1,
+          "input_type": "key_sequence",
+          "weight": 7
+        },
+        {
+          "command_name": "Nudge Forward",
+          "context": "In Edit window Keyboard Focus mode, nudge the selection forward by the current Nudge Value.",
+          "keys_mac": [["Command", "Alt", "1"], ["."]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["."]],
+          "difficulty": 1,
+          "input_type": "key_sequence",
+          "weight": 7
+        }
+      ]
+    },
+    {
+      "name": "Lesson 4",
+      "shortcuts": [
+        {
+          "command_name": "Open Workspace Browser",
+          "context": "Open a new Workspace browser window.",
+          "keys_mac": ["Option", "I"],
+          "keys_win": ["Alt", "I"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 6
+        },
+        {
+          "command_name": "Add Sync Point",
+          "context": "Add a new Sync Point to the selected clip at the current cursor position.",
+          "keys_mac": ["Command", ","],
+          "keys_win": ["Ctrl", ","],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Align Clip Start",
+          "context": "Click a clip to align its start to the beginning of the current selection or to the Edit cursor.",
+          "keys_mac": ["Control", "Click"],
+          "keys_win": ["Start", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Align Sync Point",
+          "context": "Click a clip to align its sync point to the start of the current selection or to the Edit cursor.",
+          "keys_mac": ["Control", "Shift", "Click"],
+          "keys_win": ["Start", "Shift", "Click"],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 4
+        },
+        {
+          "command_name": "Align Clip End",
+          "context": "Click a clip to align its end to the start of the current selection or to the Edit cursor.",
+          "keys_mac": ["Control", "Command", "Click"],
+          "keys_win": ["Ctrl", "Start", "Click"],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 4
+        },
+        {
+          "command_name": "Enable Plug-in Automation",
+          "context": "Click on a plug-in parameter to enable it for automation.",
+          "keys_mac": ["Control", "Option", "Command", "Click"],
+          "keys_win": ["Ctrl", "Start", "Alt", "Click"],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 5",
+      "shortcuts": [
+        {
+          "command_name": "Trim to Selection",
+          "context": "Trim a clip to match the current selection boundaries.",
+          "keys_mac": ["Command", "T"],
+          "keys_win": ["Ctrl", "T"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        },
+        {
+          "command_name": "Nudge Clip Contents Forward",
+          "context": "Nudge the contents of a clip forward without moving the clip boundaries.",
+          "keys_mac": ["Control", "Num+"],
+          "keys_win": ["Start", "Num+"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Nudge Clip Contents Backward",
+          "context": "Nudge the contents of a clip backward without moving the clip boundaries.",
+          "keys_mac": ["Control", "Num-"],
+          "keys_win": ["Start", "Num-"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Strip Silence",
+          "context": "Open the Strip Silence window to remove silent sections from clips.",
+          "keys_mac": ["Command", "U"],
+          "keys_win": ["Ctrl", "U"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 7
+        },
+        {
+          "command_name": "Dynamic Transport",
+          "context": "Enable or disable the Dynamic Transport mode.",
+          "keys_mac": ["Control", "Command", "P"],
+          "keys_win": ["Ctrl", "Start", "P"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Zoom Preset 1",
+          "context": "In Commands Keyboard Focus mode, activate Zoom Preset 1.",
+          "keys_mac": [["Command", "Alt", "1"], ["1"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["1"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 5
+        },
+        {
+          "command_name": "Zoom Preset 2",
+          "context": "In Commands Keyboard Focus mode, activate Zoom Preset 2.",
+          "keys_mac": [["Command", "Alt", "1"], ["2"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["2"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 5
+        },
+        {
+          "command_name": "Zoom Preset 3",
+          "context": "In Commands Keyboard Focus mode, activate Zoom Preset 3.",
+          "keys_mac": [["Command", "Alt", "1"], ["3"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["3"]],
+          "difficulty": 2,
+          "input_type": "key_sequence",
+          "weight": 4
+        },
+        {
+          "command_name": "Zoom Preset 4",
+          "context": "In Commands Keyboard Focus mode, activate Zoom Preset 4.",
+          "keys_mac": [["Command", "Alt", "1"], ["4"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["4"]],
+          "difficulty": 3,
+          "input_type": "key_sequence",
+          "weight": 3
+        },
+        {
+          "command_name": "Zoom Preset 5",
+          "context": "In Commands Keyboard Focus mode, activate Zoom Preset 5.",
+          "keys_mac": [["Command", "Alt", "1"], ["5"]],
+          "keys_win": [["Ctrl", "Alt", "1"], ["5"]],
+          "difficulty": 3,
+          "input_type": "key_sequence",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 6",
+      "shortcuts": [
+        {
+          "command_name": "Identify Beat",
+          "context": "Use the Identify Beat command to define the tempo based on a selection.",
+          "keys_mac": ["Command", "I"],
+          "keys_win": ["Ctrl", "I"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Open Soundbase",
+          "context": "Open a Soundbase browser window.",
+          "keys_mac": ["Control", "Option", "I"],
+          "keys_win": ["Start", "Alt", "I"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Create Clip Group",
+          "context": "Group the selected clips into a Clip Group.",
+          "keys_mac": ["Option", "Command", "G"],
+          "keys_win": ["Ctrl", "Alt", "G"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 6
+        },
+        {
+          "command_name": "Ungroup Clip Group",
+          "context": "Ungroup the selected Clip Group back into individual clips.",
+          "keys_mac": ["Option", "Command", "U"],
+          "keys_win": ["Ctrl", "Alt", "U"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Regroup Clip Group",
+          "context": "Regroup previously ungrouped clips back into their Clip Group.",
+          "keys_mac": ["Option", "Command", "R"],
+          "keys_win": ["Ctrl", "Alt", "R"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        }
+      ]
+    },
+    {
+      "name": "Lesson 7",
+      "shortcuts": [
+        {
+          "command_name": "New Memory Location",
+          "context": "Create a new Memory Location at the current cursor position.",
+          "keys_mac": ["Num Enter"],
+          "keys_win": ["Num Enter"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Memory Locations Window",
+          "context": "Open the Memory Locations window.",
+          "keys_mac": ["Command", "Num5"],
+          "keys_win": ["Ctrl", "Num5"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 6
+        },
+        {
+          "command_name": "Import Video",
+          "context": "Import a video file into the session.",
+          "keys_mac": ["Option", "Command", "Shift", "I"],
+          "keys_win": ["Ctrl", "Alt", "Shift", "I"],
+          "difficulty": 3,
+          "input_type": "key_combo",
+          "weight": 4
+        },
+        {
+          "command_name": "Toggle Track Active/Inactive",
+          "context": "Click on the Track Type indicator to toggle a track between Active and Inactive states.",
+          "keys_mac": ["Control", "Command", "Click"],
+          "keys_win": ["Ctrl", "Start", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Automation Window",
+          "context": "Open the Automation window.",
+          "keys_mac": ["Command", "Num4"],
+          "keys_win": ["Ctrl", "Num4"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "name": "Lesson 8",
+      "shortcuts": [
+        {
+          "command_name": "Show Clip Gain Info",
+          "context": "Display the Clip Gain information for the selected clip.",
+          "keys_mac": ["Control", "Shift", "="],
+          "keys_win": ["Start", "Shift", "="],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Fine Adjust Clip Gain",
+          "context": "Hold a modifier key while adjusting Clip Gain to use a finer resolution.",
+          "keys_mac": ["Command", "Click"],
+          "keys_win": ["Ctrl", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        }
+      ]
+    }
+  ]
+}

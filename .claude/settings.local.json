@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -m pip install pygame pynput)",
+      "Bash(python -m pip install pygame-ce pynput)",
+      "Bash(timeout 5 python main.py)",
+      "Bash(python -m pip install pyinstaller)",
+      "Bash(python debug_keys.py)",
+      "Bash(python -c \"from game.loader import load_certifications; certs = load_certifications\\(\\); print\\(f''Loaded {len\\(certs\\)} certifications:'', sorted\\(certs.keys\\(\\)\\)\\); [print\\(f''  {k}: {len\\(v[\"\"all_shortcuts\"\"]\\)} shortcuts, {len\\(v[\"\"category_names\"\"]\\)} categories''\\) for k, v in sorted\\(certs.items\\(\\)\\)]\")",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import game.screens; print\\(''OK''\\)\")",
+      "Bash(python main.py)",
+      "Bash(python -m pip install python-docx -q)",
+      "Bash(python -c \"from game.keyboard import KeyboardHandler; print\\('OK:', KeyboardHandler\\)\")",
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(python -m pip install pytest -q)",
+      "Bash(python -c \"from game.screens import GameScreen, MenuScreen; from game.state import load_stats; print\\('OK'\\)\")",
+      "Bash(python -m pytest tests/ -q)"
+    ]
+  }
+}
