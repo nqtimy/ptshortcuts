@@ -18,7 +18,6 @@ python -m PyInstaller \
     --windowed \
     --name "$APP_NAME" \
     --add-data "shortcuts:shortcuts" \
-    --add-data "assets:assets" \
     --hidden-import "pynput.keyboard._darwin" \
     --hidden-import "pynput.mouse._darwin" \
     --hidden-import "Quartz" \

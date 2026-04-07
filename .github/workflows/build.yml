@@ -27,7 +27,6 @@ jobs:
           python -m PyInstaller --onefile --windowed --name PTShortcuts `
             --manifest ptshortcuts.manifest `
             --add-data "shortcuts;shortcuts" `
-            --add-data "assets;assets" `
             --hidden-import pynput.keyboard._win32 `
             --hidden-import pynput.mouse._win32 `
             main.py
@@ -51,10 +50,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pygame-ce pynput pyinstaller pyobjc-framework-Quartz
+          python -m pip install pygame-ce pynput pyinstaller
+          python -m pip install pyobjc-framework-Quartz || echo "Quartz optional, skipping"
 
       - name: Build
-        run: bash build_mac.sh
+        run: |
+          python -m PyInstaller \
+            --onefile \
+            --windowed \
+            --name PTShortcuts \
+            --add-data "shortcuts:shortcuts" \
+            --hidden-import "pynput.keyboard._darwin" \
+            --hidden-import "pynput.mouse._darwin" \
+            --collect-all "pynput" \
+            main.py
 
       - name: Zip binary
         run: |
