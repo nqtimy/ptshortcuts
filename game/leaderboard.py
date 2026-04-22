@@ -24,7 +24,11 @@ from urllib.error import URLError
 # ---------------------------------------------------------------------------
 
 def _config_path():
+    # When bundled, check embedded files first (_MEIPASS), then next to exe as override.
     if getattr(sys, '_MEIPASS', None):
+        embedded = os.path.join(sys._MEIPASS, 'supabase_config.json')
+        if os.path.exists(embedded):
+            return embedded
         return os.path.join(os.path.dirname(sys.executable), 'supabase_config.json')
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         'supabase_config.json')

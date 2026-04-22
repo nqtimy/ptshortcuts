@@ -95,7 +95,7 @@ def _normalize_one_key(k):
         return [str(i) for i in range(int(m.group(1)), int(m.group(2)) + 1)]
 
     # Click types (not keyboard keys)
-    if k in ('Click', 'Right-Click'):
+    if k in ('Click', 'Right-Click', 'Double-Click'):
         return [k]
 
     # Either/or keys: ")/=" or "Num+/Num-" or "Up/Down Arrow"
@@ -140,6 +140,9 @@ def _build_detect_info(keys_list, input_type):
             continue
         if k == 'Click':
             click_type = 'left'
+            continue
+        if k == 'Double-Click':
+            click_type = 'double'
             continue
         if k == 'Right-Click':
             click_type = 'right'
@@ -218,6 +221,24 @@ def _normalize_shortcut(sc):
     else:
         detect = _build_detect_info(keys_win, input_type)
     sc.update(detect)
+
+    # Build detection info for alternatives (multiple valid shortcuts)
+    if 'alt' in sc and isinstance(sc['alt'], list):
+        alt_detects = []
+        for alt in sc['alt']:
+            alt_keys = alt.get('keys_win', [])
+            alt_type = alt.get('input_type', input_type)
+            if not alt_keys:
+                continue
+            if 'keys_mac' not in alt:
+                alt['keys_mac'] = alt_keys
+            if alt_type == 'key_sequence':
+                alt_det = _build_sequence_detect_info(alt_keys)
+            else:
+                alt_det = _build_detect_info(alt_keys, alt_type)
+            alt_det['input_type'] = alt_type
+            alt_detects.append(alt_det)
+        sc['_detect_alt'] = alt_detects
 
 
 # ---------------------------------------------------------------------------

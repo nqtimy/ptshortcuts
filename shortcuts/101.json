@@ -7,29 +7,35 @@
         {
           "command_name": "Open Transport Window",
           "context": "Display the Transport window.",
-          "keys_mac": [
-            "Command",
-            "Numpad 1"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Numpad 1"
-          ],
+          "keys_mac": ["Command", "Numpad 1"],
+          "keys_win": ["Ctrl", "Numpad 1"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
         },
         {
-          "command_name": "Open Session Setup",
-          "context": "Open the Session Setup window.",
-          "keys_mac": [
-            "Option",
-            "Enter"
-          ],
-          "keys_win": [
-            "Alt",
-            "Enter"
-          ],
+          "command_name": "Start/Stop Playback",
+          "context": "Start or stop playback from the current location.",
+          "keys_mac": ["Space"],
+          "keys_win": ["Space"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 10
+        },
+        {
+          "command_name": "Go to Beginning",
+          "context": "Move the playback cursor to the beginning of the session.",
+          "keys_mac": ["Return"],
+          "keys_win": ["Enter"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Go to End",
+          "context": "Move the playback cursor to the end of the session.",
+          "keys_mac": ["Option", "Return"],
+          "keys_win": ["Alt", "Enter"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
@@ -37,31 +43,17 @@
         {
           "command_name": "Save Session",
           "context": "Save the current session.",
-          "keys_mac": [
-            "Command",
-            "S"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "S"
-          ],
+          "keys_mac": ["Command", "S"],
+          "keys_win": ["Ctrl", "S"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 10
         },
         {
           "command_name": "Save Session Copy",
-          "context": "Save a copy of the current session to a new location.",
-          "keys_mac": [
-            "Control",
-            "Command",
-            "S"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Start",
-            "S"
-          ],
+          "context": "Open the Save As dialog to save a copy of the session.",
+          "keys_mac": ["Control", "Command", "S"],
+          "keys_win": ["Ctrl", "Start", "S"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
@@ -74,91 +66,44 @@
         {
           "command_name": "New Session",
           "context": "Create a new session.",
-          "keys_mac": [
-            "Command",
-            "N"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "N"
-          ],
+          "keys_mac": ["Command", "N"],
+          "keys_win": ["Ctrl", "N"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 10
         },
         {
-          "command_name": "Move Tool Cluster",
-          "context": "Click and drag the tool cluster to reposition it.",
-          "keys_mac": [
-            "Command",
-            "Click"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Click"
-          ],
-          "difficulty": 3,
-          "input_type": "modifier_click",
-          "weight": 3
-        },
-        {
-          "command_name": "Toggle Mix Window",
-          "context": "Show or hide the Mix window.",
-          "keys_mac": [
-            "Command",
-            "="
-          ],
-          "keys_win": [
-            "Ctrl",
-            "="
-          ],
+          "command_name": "Toggle Mix/Edit Window",
+          "context": "Toggle between the Mix and Edit windows.",
+          "keys_mac": ["Command", "="],
+          "keys_win": ["Ctrl", "="],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 8
         },
         {
-          "command_name": "Toggle MIDI Controls",
-          "context": "Show or hide the MIDI controls in the Edit window.",
-          "keys_mac": [
-            "Option",
-            "Command",
-            "M"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Alt",
-            "M"
-          ],
+          "command_name": "Toggle Narrow Mix View",
+          "context": "Toggle between Narrow Mix view and Normal view.",
+          "keys_mac": ["Option", "Command", "M"],
+          "keys_win": ["Ctrl", "Alt", "M"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
         },
         {
-          "command_name": "Toggle Edit View Column",
+          "command_name": "Hide Edit Window View",
           "context": "Show or hide an Edit window View column by clicking its heading.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
           "difficulty": 2,
           "input_type": "modifier_click",
           "weight": 5
         },
         {
-          "command_name": "Toggle Mix View Column",
+          "command_name": "Hide Mix Window View",
           "context": "Show or hide a Mix window View column by clicking its heading on any track.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
           "difficulty": 2,
           "input_type": "modifier_click",
           "weight": 5
@@ -171,14 +116,8 @@
         {
           "command_name": "Cut",
           "context": "Cut the current selection to the clipboard.",
-          "keys_mac": [
-            "Command",
-            "X"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "X"
-          ],
+          "keys_mac": ["Command", "X"],
+          "keys_win": ["Ctrl", "X"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 10
@@ -186,14 +125,8 @@
         {
           "command_name": "Copy",
           "context": "Copy the current selection to the clipboard.",
-          "keys_mac": [
-            "Command",
-            "C"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "C"
-          ],
+          "keys_mac": ["Command", "C"],
+          "keys_win": ["Ctrl", "C"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 10
@@ -201,29 +134,17 @@
         {
           "command_name": "Paste",
           "context": "Paste from the clipboard at the current location.",
-          "keys_mac": [
-            "Command",
-            "V"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "V"
-          ],
+          "keys_mac": ["Command", "V"],
+          "keys_win": ["Ctrl", "V"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 10
         },
         {
-          "command_name": "Clear Selection",
+          "command_name": "Clear",
           "context": "Delete the current selection without copying to clipboard.",
-          "keys_mac": [
-            "Command",
-            "B"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "B"
-          ],
+          "keys_mac": ["Command", "B"],
+          "keys_win": ["Ctrl", "B"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 8
@@ -231,14 +152,8 @@
         {
           "command_name": "Undo",
           "context": "Undo the last action.",
-          "keys_mac": [
-            "Command",
-            "Z"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Z"
-          ],
+          "keys_mac": ["Command", "Z"],
+          "keys_win": ["Ctrl", "Z"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 10
@@ -246,46 +161,26 @@
         {
           "command_name": "Redo",
           "context": "Redo the last undone action.",
-          "keys_mac": [
-            "Shift",
-            "Command",
-            "Z"
-          ],
-          "keys_win": [
-            "Shift",
-            "Ctrl",
-            "Z"
-          ],
+          "keys_mac": ["Shift", "Command", "Z"],
+          "keys_win": ["Shift", "Ctrl", "Z"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 8
         },
         {
-          "command_name": "Duplicate Clip",
+          "command_name": "Duplicate",
           "context": "Duplicate the selected clip.",
-          "keys_mac": [
-            "Command",
-            "D"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "D"
-          ],
+          "keys_mac": ["Command", "D"],
+          "keys_win": ["Ctrl", "D"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 8
         },
         {
-          "command_name": "Repeat Paste",
+          "command_name": "Repeat",
           "context": "Repeatedly paste the clipboard content.",
-          "keys_mac": [
-            "Option",
-            "R"
-          ],
-          "keys_win": [
-            "Alt",
-            "R"
-          ],
+          "keys_mac": ["Option", "R"],
+          "keys_win": ["Alt", "R"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
@@ -293,14 +188,8 @@
         {
           "command_name": "Separate Clip",
           "context": "Separate a clip at the edit cursor or selection boundaries.",
-          "keys_mac": [
-            "Command",
-            "E"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "E"
-          ],
+          "keys_mac": ["Command", "E"],
+          "keys_win": ["Ctrl", "E"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 8
@@ -308,352 +197,94 @@
         {
           "command_name": "Heal Separation",
           "context": "Rejoin a previously separated clip.",
-          "keys_mac": [
-            "Command",
-            "H"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "H"
-          ],
+          "keys_mac": ["Command", "H"],
+          "keys_win": ["Ctrl", "H"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
         },
         {
-          "command_name": "Consolidate Selection",
+          "command_name": "Consolidate Clip",
           "context": "Consolidate the current selection into a single clip.",
-          "keys_mac": [
-            "Shift",
-            "Option",
-            "3"
-          ],
-          "keys_win": [
-            "Shift",
-            "Alt",
-            "3"
-          ],
+          "keys_mac": ["Shift", "Option", "3"],
+          "keys_win": ["Shift", "Alt", "3"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
         },
         {
-          "command_name": "Select Track Range",
-          "context": "Select a range of tracks by clicking the first and last track name.",
-          "keys_mac": [
-            "Shift",
-            "Click"
-          ],
-          "keys_win": [
-            "Shift",
-            "Click"
-          ],
-          "difficulty": 1,
-          "input_type": "modifier_click",
-          "weight": 8
-        },
-        {
-          "command_name": "Toggle Track Selection",
-          "context": "Add or remove individual tracks from the selection.",
-          "keys_mac": [
-            "Command",
-            "Click"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Click"
-          ],
-          "difficulty": 1,
-          "input_type": "modifier_click",
-          "weight": 8
-        },
-        {
-          "command_name": "Select All Tracks",
-          "context": "Select all tracks by clicking any unselected track.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
+          "command_name": "Nudge Later",
+          "context": "Nudge the selection later in time.",
+          "keys_mac": ["Num+"],
+          "keys_win": ["Num+"],
+          "alt": [
+            {
+              "keys_mac": [","],
+              "keys_win": [","],
+              "input_type": "single_key"
+            }
           ],
           "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Apply to All Tracks",
-          "context": "Apply a change made on any track to all tracks.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Apply to Selected Tracks",
-          "context": "Apply a change on any selected track to all selected tracks.",
-          "keys_mac": [
-            "Shift",
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Shift",
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Extend Selection",
-          "context": "Extend the current edit selection by clicking on the timeline.",
-          "keys_mac": [
-            "Shift",
-            "Click"
-          ],
-          "keys_win": [
-            "Shift",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Cycle Trim Tools",
-          "context": "Cycle through the different Trim tool modes.",
-          "keys_mac": [
-            "F6"
-          ],
-          "keys_win": [
-            "F6"
-          ],
-          "difficulty": 1,
           "input_type": "single_key",
-          "weight": 8
+          "weight": 5
         },
         {
-          "command_name": "Find/Replace",
-          "context": "Open the Find and Replace dialog.",
-          "keys_mac": [
-            "Command",
-            "F"
+          "command_name": "Nudge Earlier",
+          "context": "Nudge the selection earlier in time.",
+          "keys_mac": ["Num-"],
+          "keys_win": ["Num-"],
+          "alt": [
+            {
+              "keys_mac": ["."],
+              "keys_win": ["."],
+              "input_type": "single_key"
+            }
           ],
-          "keys_win": [
-            "Ctrl",
-            "F"
-          ],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
+        },
+        {
+          "command_name": "Create Fades",
+          "context": "Open the Fades dialog for creating a fade-in, fade-out, or crossfade.",
+          "keys_mac": ["Command", "F"],
+          "keys_win": ["Ctrl", "F"],
           "difficulty": 1,
           "input_type": "key_combo",
           "weight": 8
+        },
+        {
+          "command_name": "Fade-in to Cursor",
+          "context": "Create a fade-in from the start of a clip to the edit cursor position.",
+          "keys_mac": ["D"],
+          "keys_win": ["D"],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
+        },
+        {
+          "command_name": "Fade-out to Cursor",
+          "context": "Create a fade-out from the edit cursor position to the end of a clip.",
+          "keys_mac": ["G"],
+          "keys_win": ["G"],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
+        },
+        {
+          "command_name": "Crossfade",
+          "context": "Create a crossfade over the selected area.",
+          "keys_mac": ["F"],
+          "keys_win": ["F"],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
         },
         {
           "command_name": "Tab Backward",
-          "context": "Navigate backward between clip boundaries using Tab.",
-          "keys_mac": [
-            "Option",
-            "Tab"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Tab"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
-        },
-        {
-          "command_name": "New Tracks",
-          "context": "Open the New Tracks dialog box.",
-          "keys_mac": [
-            "Shift",
-            "Command",
-            "N"
-          ],
-          "keys_win": [
-            "Shift",
-            "Ctrl",
-            "N"
-          ],
-          "difficulty": 1,
-          "input_type": "key_combo",
-          "weight": 8
-        },
-        {
-          "command_name": "Zoom Horizontal",
-          "context": "Zoom the Edit window in or out horizontally.",
-          "keys_mac": [
-            "Command",
-            "Left/Right Arrow"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Left/Right Arrow"
-          ],
-          "difficulty": 1,
-          "input_type": "key_combo",
-          "weight": 8
-        },
-        {
-          "command_name": "Zoom Vertical",
-          "context": "Zoom the Edit window in or out vertically.",
-          "keys_mac": [
-            "Command",
-            "Up/Down Arrow"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Up/Down Arrow"
-          ],
-          "difficulty": 1,
-          "input_type": "key_combo",
-          "weight": 8
-        },
-        {
-          "command_name": "Scroll Track Into View",
-          "context": "Scroll a track into view in both the Mix and Edit windows.",
-          "keys_mac": [
-            "Command",
-            "Click"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Name Tracks Navigate",
-          "context": "Move between track names in the Name Tracks dialog.",
-          "keys_mac": [
-            "Command",
-            "Left/Right Arrow"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Left/Right Arrow"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
-        },
-        {
-          "command_name": "Resize All Tracks",
-          "context": "Change the height of all tracks at once.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Resize Selected Tracks",
-          "context": "Change the height of all selected tracks at once.",
-          "keys_mac": [
-            "Option",
-            "Shift",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Shift",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Solo/Mute All Tracks",
-          "context": "Solo or mute all tracks at once.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Solo/Mute Selected Tracks",
-          "context": "Solo or mute all selected tracks at once.",
-          "keys_mac": [
-            "Option",
-            "Shift",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Shift",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Import Audio with Drag",
-          "context": "Import audio by dragging it into a session.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Open Workspace Browser",
-          "context": "Open a new Workspace browser window.",
-          "keys_mac": [
-            "Option",
-            "I"
-          ],
-          "keys_win": [
-            "Alt",
-            "I"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
-        },
-        {
-          "command_name": "Open Project Browser",
-          "context": "Open the project browser window.",
-          "keys_mac": [
-            "Option",
-            "J"
-          ],
-          "keys_win": [
-            "Alt",
-            "J"
-          ],
+          "context": "Move the edit insertion to the previous clip boundary.",
+          "keys_mac": ["Option", "Tab"],
+          "keys_win": ["Ctrl", "Tab"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
@@ -664,80 +295,138 @@
       "name": "Lesson 4",
       "shortcuts": [
         {
-          "command_name": "Record Enable",
-          "context": "Arm a track for recording.",
-          "keys_mac": [
-            "Option",
-            "Enter"
-          ],
-          "keys_win": [
-            "Alt",
-            "Enter"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
+          "command_name": "Select Range of Tracks",
+          "context": "Select a range of tracks by clicking the first and last track name.",
+          "keys_mac": ["Shift", "Click"],
+          "keys_win": ["Shift", "Click"],
+          "difficulty": 1,
+          "input_type": "modifier_click",
+          "weight": 8
         },
         {
-          "command_name": "Select from Start",
-          "context": "Select from the edit cursor to the beginning of the session.",
-          "keys_mac": [
-            "Shift",
-            "Enter"
-          ],
-          "keys_win": [
-            "Shift",
-            "Enter"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
+          "command_name": "Toggle Track Selection",
+          "context": "Add or remove individual tracks from the selection.",
+          "keys_mac": ["Command", "Click"],
+          "keys_win": ["Ctrl", "Click"],
+          "difficulty": 1,
+          "input_type": "modifier_click",
+          "weight": 8
         },
         {
-          "command_name": "Select from Insertion to End",
-          "context": "Select from the edit cursor to the end of the session.",
-          "keys_mac": [
-            "Shift",
-            "Option",
-            "Enter"
-          ],
-          "keys_win": [
-            "Shift",
-            "Alt",
-            "Enter"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
-        },
-        {
-          "command_name": "Zoom to Fill Selection",
-          "context": "Fill the Edit window with the current edit selection.",
-          "keys_mac": [
-            "Option",
-            "F"
-          ],
-          "keys_win": [
-            "Alt",
-            "F"
-          ],
-          "difficulty": 2,
-          "input_type": "key_combo",
-          "weight": 5
-        },
-        {
-          "command_name": "Zoom to Fit",
-          "context": "Zoom to fit the entire session in the Edit window.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
+          "command_name": "Select All Tracks",
+          "context": "Select or deselect all tracks at once.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
           "difficulty": 2,
           "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Show/Hide All Tracks",
+          "context": "Show or hide all tracks by clicking any track's Show/Hide icon.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Extend Selection",
+          "context": "Extend the current edit selection by clicking on the timeline of another track.",
+          "keys_mac": ["Shift", "Click"],
+          "keys_win": ["Shift", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Apply to All Tracks",
+          "context": "Apply a change made on any track to all tracks.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Apply to Selected Tracks",
+          "context": "Apply a change made on any selected track to all selected tracks.",
+          "keys_mac": ["Shift", "Option", "Click"],
+          "keys_win": ["Shift", "Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "New Tracks",
+          "context": "Open the New Tracks dialog box.",
+          "keys_mac": ["Shift", "Command", "N"],
+          "keys_win": ["Shift", "Ctrl", "N"],
+          "difficulty": 1,
+          "input_type": "key_combo",
+          "weight": 8
+        },
+        {
+          "command_name": "Name Tracks Navigate",
+          "context": "Advance to the next or previous track in the Name Tracks dialog.",
+          "keys_mac": ["Command", "Left/Right Arrow"],
+          "keys_win": ["Ctrl", "Left/Right Arrow"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Resize All Tracks",
+          "context": "Change the height of all tracks at once.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Resize Selected Tracks",
+          "context": "Change the height of all selected tracks at once.",
+          "keys_mac": ["Option", "Shift", "Click"],
+          "keys_win": ["Alt", "Shift", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Solo/Mute All Tracks",
+          "context": "Solo or mute all tracks at once.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Solo/Mute Selected Tracks",
+          "context": "Solo or mute all selected tracks at once.",
+          "keys_mac": ["Option", "Shift", "Click"],
+          "keys_win": ["Alt", "Shift", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Open Workspace Browser",
+          "context": "Open a new Workspace browser window.",
+          "keys_mac": ["Option", "I"],
+          "keys_win": ["Alt", "I"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Bring Workspaces to Front",
+          "context": "Bring all Workspace browsers to the front.",
+          "keys_mac": ["Option", "J"],
+          "keys_win": ["Alt", "J"],
+          "difficulty": 2,
+          "input_type": "key_combo",
           "weight": 5
         }
       ]
@@ -746,92 +435,94 @@
       "name": "Lesson 5",
       "shortcuts": [
         {
-          "command_name": "Tap Tempo",
-          "context": "Tap a tempo by pressing a key in the BPM field.",
-          "keys_mac": [
-            "T"
-          ],
-          "keys_win": [
-            "T"
-          ],
+          "command_name": "Select to Beginning",
+          "context": "Select from the playback cursor to the beginning of the session.",
+          "keys_mac": ["Shift", "Return"],
+          "keys_win": ["Shift", "Enter"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Select to End",
+          "context": "Select from the playback cursor to the end of the session.",
+          "keys_mac": ["Shift", "Option", "Return"],
+          "keys_win": ["Shift", "Alt", "Enter"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Zoom Out",
+          "context": "Horizontally zoom out in the Edit window.",
+          "keys_mac": ["R"],
+          "keys_win": ["R"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Zoom In",
+          "context": "Horizontally zoom in in the Edit window.",
+          "keys_mac": ["T"],
+          "keys_win": ["T"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Insertion Follows Playback",
+          "context": "Enable or disable Insertion Follows Playback.",
+          "keys_mac": ["N"],
+          "keys_win": ["N"],
           "difficulty": 2,
           "input_type": "single_key",
           "weight": 5
         },
         {
-          "command_name": "Reset Volume/Pan",
-          "context": "Reset a volume or pan control to its default value.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 2,
-          "input_type": "modifier_click",
-          "weight": 5
-        },
-        {
-          "command_name": "Start/Stop Playback (Spacebar)",
-          "context": "Start or stop playback from the current location.",
-          "keys_mac": [
-            "Command",
-            "Space"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Space"
-          ],
+          "command_name": "Scroll to Selection Start",
+          "context": "Scroll the Edit window to the beginning of the selection or playback cursor.",
+          "keys_mac": ["Left Arrow"],
+          "keys_win": ["Left Arrow"],
           "difficulty": 1,
-          "input_type": "key_combo",
+          "input_type": "single_key",
           "weight": 8
         },
         {
-          "command_name": "Slide Pre/Post-Roll Point",
-          "context": "Slide the punch in or punch out point while preserving the other.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 3,
-          "input_type": "modifier_click",
-          "weight": 3
+          "command_name": "Scroll to Selection End",
+          "context": "Scroll the Edit window to the end of the selection or playback cursor.",
+          "keys_mac": ["Right Arrow"],
+          "keys_win": ["Right Arrow"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
         },
         {
-          "command_name": "Pre-Roll/Post-Roll Toggle",
-          "context": "Toggle pre-roll and post-roll on or off.",
-          "keys_mac": [
-            "Command",
-            "K"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "K"
-          ],
+          "command_name": "Zoom to Fill Selection",
+          "context": "Fill the Edit window with the current edit selection.",
+          "keys_mac": ["Option", "F"],
+          "keys_win": ["Alt", "F"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
         },
         {
-          "command_name": "Set Pre/Post-Roll from Edit",
-          "context": "Set pre-roll or post-roll duration by clicking in the track area.",
-          "keys_mac": [
-            "Option",
-            "Click"
-          ],
-          "keys_win": [
-            "Alt",
-            "Click"
-          ],
-          "difficulty": 3,
+          "command_name": "Reset Volume/Pan",
+          "context": "Reset a volume fader to unity or a pan control to center.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
           "input_type": "modifier_click",
-          "weight": 3
+          "weight": 5
+        },
+        {
+          "command_name": "Tap Tempo",
+          "context": "Tap a tempo in the BPM field of the Transport or Tempo dialog.",
+          "keys_mac": ["T"],
+          "keys_win": ["T"],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
         }
       ]
     },
@@ -839,18 +530,82 @@
       "name": "Lesson 6",
       "shortcuts": [
         {
-          "command_name": "Enable Tab to Transients",
+          "command_name": "Shuffle Mode",
+          "context": "Set the edit mode to Shuffle.",
+          "keys_mac": ["F1"],
+          "keys_win": ["F1"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Slip Mode",
+          "context": "Set the edit mode to Slip.",
+          "keys_mac": ["F2"],
+          "keys_win": ["F2"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Spot Mode",
+          "context": "Set the edit mode to Spot.",
+          "keys_mac": ["F3"],
+          "keys_win": ["F3"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Grid Mode",
+          "context": "Set the edit mode to Grid.",
+          "keys_mac": ["F4"],
+          "keys_win": ["F4"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Zoomer Tool",
+          "context": "Select the Zoomer tool.",
+          "keys_mac": ["F5"],
+          "keys_win": ["F5"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Trim Tool",
+          "context": "Select the Trim tool (press repeatedly to cycle through Trim tool modes).",
+          "keys_mac": ["F6"],
+          "keys_win": ["F6"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Selector Tool",
+          "context": "Select the Selector tool.",
+          "keys_mac": ["F7"],
+          "keys_win": ["F7"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Grabber Tool",
+          "context": "Select the Grabber tool.",
+          "keys_mac": ["F8"],
+          "keys_win": ["F8"],
+          "difficulty": 1,
+          "input_type": "single_key",
+          "weight": 8
+        },
+        {
+          "command_name": "Tab to Transients",
           "context": "Toggle Tab to Transients mode on or off.",
-          "keys_mac": [
-            "Option",
-            "Command",
-            "Tab"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Alt",
-            "Tab"
-          ],
+          "keys_mac": ["Option", "Command", "Tab"],
+          "keys_win": ["Ctrl", "Alt", "Tab"],
           "difficulty": 2,
           "input_type": "key_combo",
           "weight": 5
@@ -861,23 +616,147 @@
       "name": "Lesson 7",
       "shortcuts": [
         {
+          "command_name": "Begin Recording",
+          "context": "Start recording on record-enabled tracks.",
+          "keys_mac": ["Command", "Space"],
+          "keys_win": ["Ctrl", "Space"],
+          "alt": [
+            {
+              "keys_mac": ["F12"],
+              "keys_win": ["F12"],
+              "input_type": "single_key"
+            },
+            {
+              "keys_mac": ["Numpad 3"],
+              "keys_win": ["Numpad 3"],
+              "input_type": "single_key"
+            }
+          ],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Pre/Post-Roll Toggle",
+          "context": "Enable or disable pre-roll and post-roll.",
+          "keys_mac": ["Command", "K"],
+          "keys_win": ["Ctrl", "K"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
+          "command_name": "Set Pre/Post-Roll Point",
+          "context": "Set a pre-roll or post-roll point by clicking in the Edit window tracks area.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Wait for Note",
+          "context": "Enable Wait for Note mode for MIDI recording.",
+          "keys_mac": ["F11"],
+          "keys_win": ["F11"],
+          "difficulty": 2,
+          "input_type": "single_key",
+          "weight": 5
+        },
+        {
+          "command_name": "Virtual MIDI Keyboard",
+          "context": "Open or close the Virtual MIDI Keyboard.",
+          "keys_mac": ["Shift", "K"],
+          "keys_win": ["Shift", "K"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
+        },
+        {
           "command_name": "Import Video",
           "context": "Open the Import Video dialog.",
-          "keys_mac": [
-            "Option",
-            "Command",
-            "Shift",
-            "I"
-          ],
-          "keys_win": [
-            "Ctrl",
-            "Alt",
-            "Shift",
-            "I"
-          ],
+          "keys_mac": ["Option", "Command", "Shift", "I"],
+          "keys_win": ["Ctrl", "Alt", "Shift", "I"],
           "difficulty": 3,
           "input_type": "key_combo",
           "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Lesson 8",
+      "shortcuts": [
+        {
+          "command_name": "Solo Safe",
+          "context": "Enable or disable Solo Safe on a track by clicking its Solo button.",
+          "keys_mac": ["Command", "Click"],
+          "keys_win": ["Ctrl", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Bypass Plug-in",
+          "context": "Bypass a plug-in by clicking its insert assignment.",
+          "keys_mac": ["Command", "Click"],
+          "keys_win": ["Ctrl", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Deactivate Plug-in",
+          "context": "Make a plug-in inactive by clicking its insert assignment.",
+          "keys_mac": ["Control", "Command", "Click"],
+          "keys_win": ["Ctrl", "Start", "Click"],
+          "difficulty": 3,
+          "input_type": "modifier_click",
+          "weight": 3
+        },
+        {
+          "command_name": "Set Send to Unity",
+          "context": "Set a send fader level to unity (0 dB).",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Change Automation Mode (All)",
+          "context": "Change the automation mode of all tracks at once.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Change Automation Mode (Selected)",
+          "context": "Change the automation mode of all selected tracks.",
+          "keys_mac": ["Shift", "Option", "Click"],
+          "keys_win": ["Shift", "Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Delete Automation Breakpoint",
+          "context": "Delete an existing automation breakpoint with the Grabber tool.",
+          "keys_mac": ["Option", "Click"],
+          "keys_win": ["Alt", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
+        },
+        {
+          "command_name": "Bounce Mix",
+          "context": "Open the Bounce Mix dialog box.",
+          "keys_mac": ["Command", "Option", "B"],
+          "keys_win": ["Ctrl", "Alt", "B"],
+          "difficulty": 2,
+          "input_type": "key_combo",
+          "weight": 5
         }
       ]
     }

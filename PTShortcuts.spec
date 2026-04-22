@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('shortcuts', 'shortcuts'), ('assets', 'assets')],
+    datas=[('shortcuts', 'shortcuts'), ('assets', 'assets'), ('supabase_config.json', '.')],
     hiddenimports=['pynput.keyboard._win32', 'pynput.mouse._win32'],
     hookspath=[],
     hooksconfig={},

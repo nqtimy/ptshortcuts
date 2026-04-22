@@ -12,9 +12,21 @@ from game.config import (
 
 
 def get_save_path():
-    """Get save file path. In bundled mode, save next to the exe."""
+    """Get save file path.
+
+    Bundled (.exe / Mac app): saves in the user data directory so it persists
+    regardless of where the binary is installed or run from.
+      Windows → %APPDATA%/PTShortcuts/save.json
+      macOS   → ~/Library/Application Support/PTShortcuts/save.json
+    Dev (running main.py directly): saves in the project root.
+    """
     if getattr(sys, '_MEIPASS', None):
-        return os.path.join(os.path.dirname(sys.executable), 'save.json')
+        if sys.platform == 'darwin':
+            base = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'PTShortcuts')
+        else:
+            base = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'PTShortcuts')
+        os.makedirs(base, exist_ok=True)
+        return os.path.join(base, 'save.json')
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'save.json')
 
 

@@ -1,0 +1,20 @@
+# Build artifacts
+build/
+dist/*.exe
+dist/save.json
+*.spec
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Save data local
+save.json
+
+# Secrets
+supabase_config.json
+
+# IDE
+.vscode/
+.idea/

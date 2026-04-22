@@ -126,7 +126,7 @@ def main():
                 menu.show_stats = False
                 cert_name = menu.current_cert
                 if cert_name in certifications:
-                    stats_screen = StatsScreen(cert_name, certifications[cert_name])
+                    stats_screen = StatsScreen(certifications, cert_name)
                     current_screen = 'stats'
 
             # Check menu selection

@@ -13,11 +13,17 @@ echo "=== PT Shortcuts — macOS build ==="
 # Clean previous build
 rm -rf build "$DIST_DIR/$APP_NAME.app"
 
-python -m PyInstaller \
+EXTRA_DATA=""
+if [ -f "supabase_config.json" ]; then
+    EXTRA_DATA='--add-data "supabase_config.json:."'
+fi
+
+eval python -m PyInstaller \
     --onefile \
     --windowed \
     --name "$APP_NAME" \
     --add-data "shortcuts:shortcuts" \
+    $EXTRA_DATA \
     --hidden-import "pynput.keyboard._darwin" \
     --hidden-import "pynput.mouse._darwin" \
     --hidden-import "Quartz" \

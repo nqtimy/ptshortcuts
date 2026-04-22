@@ -24,14 +24,25 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pygame-ce pynput pyinstaller
 
+      - name: Write Supabase config
+        if: ${{ env.SUPABASE_URL != '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          '{"url": "${{ env.SUPABASE_URL }}", "anon_key": "${{ env.SUPABASE_ANON_KEY }}"}' | Out-File -Encoding utf8 supabase_config.json
+
       - name: Build
         run: |
-          python -m PyInstaller --onefile --windowed --name PTShortcuts `
-            --manifest ptshortcuts.manifest `
-            --add-data "shortcuts;shortcuts" `
-            --hidden-import pynput.keyboard._win32 `
-            --hidden-import pynput.mouse._win32 `
-            main.py
+          $extra = if (Test-Path supabase_config.json) { '--add-data "supabase_config.json;."' } else { '' }
+          $cmd = "python -m PyInstaller --onefile --windowed --name PTShortcuts ``
+            --manifest ptshortcuts.manifest ``
+            --add-data `"shortcuts;shortcuts`" ``
+            --hidden-import pynput.keyboard._win32 ``
+            --hidden-import pynput.mouse._win32 ``
+            $extra ``
+            main.py"
+          Invoke-Expression $cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -55,13 +66,24 @@ jobs:
           python -m pip install pygame-ce pynput pyinstaller
           python -m pip install pyobjc-framework-Quartz || echo "Quartz optional, skipping"
 
+      - name: Write Supabase config
+        if: ${{ env.SUPABASE_URL != '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo '{"url": "${{ env.SUPABASE_URL }}", "anon_key": "${{ env.SUPABASE_ANON_KEY }}"}' > supabase_config.json
+
       - name: Build
         run: |
-          python -m PyInstaller \
+          EXTRA=""
+          [ -f supabase_config.json ] && EXTRA='--add-data "supabase_config.json:."'
+          eval python -m PyInstaller \
             --onefile \
             --windowed \
             --name PTShortcuts \
             --add-data "shortcuts:shortcuts" \
+            $EXTRA \
             --hidden-import "pynput.keyboard._darwin" \
             --hidden-import "pynput.mouse._darwin" \
             --collect-all "pynput" \

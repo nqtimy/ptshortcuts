@@ -16,7 +16,12 @@
       "Bash(python -m pytest tests/ -v)",
       "Bash(python -m pip install pytest -q)",
       "Bash(python -c \"from game.screens import GameScreen, MenuScreen; from game.state import load_stats; print\\('OK'\\)\")",
-      "Bash(python -m pytest tests/ -q)"
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(python -m pytest tests/ --collect-only -q)",
+      "Bash(python -c \"import ast,io; src=open\\('tests/test_loader.py'\\).read\\(\\); m=ast.parse\\(src\\); n=sum\\(1 for node in ast.walk\\(m\\) if isinstance\\(node, ast.FunctionDef\\) and node.name.startswith\\('test_'\\)\\); print\\('test_loader:',n\\)\")",
+      "Bash(python -c \"import ast; src=open\\('tests/test_keyboard.py'\\).read\\(\\); m=ast.parse\\(src\\); n=sum\\(1 for node in ast.walk\\(m\\) if isinstance\\(node, ast.FunctionDef\\) and node.name.startswith\\('test_'\\)\\); print\\('test_keyboard:',n\\)\")",
+      "Bash(python -c \"from game.loader import load_certifications; c = load_certifications\\(\\); print\\('201:', len\\(c['201']['all_shortcuts']\\), 'shortcuts in', len\\(c['201']['category_names']\\), 'lessons'\\)\")",
+      "Bash(git add *)"
     ]
   }
 }

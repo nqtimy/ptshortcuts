@@ -69,6 +69,7 @@ class TestNormalizeOneKey:
     def test_click_passthrough(self):
         assert _normalize_one_key('Click') == ['Click']
         assert _normalize_one_key('Right-Click') == ['Right-Click']
+        assert _normalize_one_key('Double-Click') == ['Double-Click']
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +184,14 @@ class TestBuildDetectInfo:
     def test_right_click_detected(self):
         info = _build_detect_info(['Right-Click'], 'modifier_click')
         assert info['_detect_click'] == 'right'
+
+    def test_double_click_detected(self):
+        info = _build_detect_info(['Ctrl', 'Double-Click'], 'modifier_click')
+        assert info['_detect_click'] == 'double'
+        assert info['_detect_modifiers'] == frozenset({'Ctrl'})
+        # Double-Click should not appear in key options
+        for opt in info['_detect_key_options']:
+            assert 'Double-Click' not in opt
 
     def test_input_type_stored(self):
         info = _build_detect_info(['Ctrl', 'S'], 'key_combo')

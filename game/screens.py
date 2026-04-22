@@ -24,6 +24,8 @@ else:
     _KEYS_SMALL  = 'keys_mac'
     _KEYS_BIG    = 'keys_win'
     _COLOR_BIG   = ACCENT_BLUE
+_DBLCLICK_THRESHOLD = 0.4  # seconds max between two clicks for a double-click
+
 from game.loader import get_shortcuts_for_categories, get_weighted_shortcuts
 from game.particles import (
     ScorePopup, RingParticle, spawn_explosion, spawn_sparks,
@@ -884,6 +886,11 @@ class GameScreen:
         # Key sequence tracking (for key_sequence input_type)
         self._seq_step = 0  # current step index in the sequence
 
+        # Double-click tracking (for modifier_click with _detect_click == 'double')
+        self._dblclick_time = 0.0  # time.time() of first click
+        self._dblclick_mods_ok = False  # whether first click had correct mods
+        _DBLCLICK_THRESHOLD = 0.4  # seconds between clicks
+
         # Review mode: sequential playlist of all shortcuts
         self._review_playlist = []
         self._review_index = 0
@@ -916,6 +923,7 @@ class GameScreen:
             self.state.revealed = False
             self.state.skipped = False
             self._seq_step = 0
+            self._dblclick_time = 0.0
             self.kbd.clear()
             self._record_view(chosen)
             return
@@ -932,8 +940,32 @@ class GameScreen:
         self.state.revealed = False
         self.state.skipped = False
         self._seq_step = 0
+        self._dblclick_time = 0.0
         self.kbd.clear()
         self._record_view(chosen)
+
+    def _check_alt_combo(self, sc):
+        """Check alternative shortcuts. Returns True if any alt matches (and triggers correct)."""
+        for alt_det in sc.get('_detect_alt', []):
+            alt_type = alt_det.get('_detect_input_type', 'key_combo')
+            alt_opts = alt_det.get('_detect_key_options', [])
+            if not alt_opts:
+                continue
+            if alt_type == 'single_key':
+                first_opt = next(iter(alt_opts[0])) if alt_opts else ''
+                if first_opt in ('Win', 'Ctrl', 'Shift', 'Alt'):
+                    if self.kbd.check_modifier_only(alt_det.get('_detect_modifiers')) is True:
+                        self._do_correct()
+                        return True
+                else:
+                    if self.kbd.check_combo_v2(alt_opts) is True:
+                        self._do_correct()
+                        return True
+            elif alt_type == 'key_combo':
+                if self.kbd.check_combo_v2(alt_opts) is True:
+                    self._do_correct()
+                    return True
+        return False
 
     def _do_correct(self):
         response_time = max(0.0, time.time() - self._shortcut_shown_at)
@@ -1134,15 +1166,75 @@ class GameScreen:
                 sc = self.state.current_shortcut
                 if sc and sc.get('_detect_input_type') == 'modifier_click':
                     expected_click = sc.get('_detect_click', 'left')
-                    click_ok = (expected_click == 'left' and is_left) or \
-                               (expected_click == 'right' and is_right)
-                    if click_ok:
-                        if self.kbd.check_modifiers_for_click(sc.get('_detect_modifiers', frozenset())):
-                            self._do_correct()
-                            return None
+
+                    # --- Helper: does this click event satisfy the expected type? ---
+                    def _click_type_ok(exp, is_l, is_r):
+                        if exp == 'left':
+                            return is_l
+                        if exp == 'right':
+                            return is_r
+                        if exp == 'double':
+                            return is_l  # double-click uses left button
+                        return False
+
+                    # --- Helper: check double-click state machine ---
+                    def _try_double(mods_expected):
+                        """For 'double' click type: first click records, second validates.
+                        Returns: 'correct' | 'wait' | 'wrong'."""
+                        now = time.time()
+                        if not self.kbd.check_modifiers_for_click(mods_expected):
+                            self._dblclick_time = 0.0
+                            return 'wrong'
+                        if now - self._dblclick_time < _DBLCLICK_THRESHOLD:
+                            self._dblclick_time = 0.0
+                            return 'correct'
+                        # First click — record and wait for second
+                        self._dblclick_time = now
+                        return 'wait'
+
+                    # --- Primary shortcut check ---
+                    if _click_type_ok(expected_click, is_left, is_right):
+                        exp_mods = sc.get('_detect_modifiers', frozenset())
+                        if expected_click == 'double':
+                            result = _try_double(exp_mods)
+                            if result == 'correct':
+                                self._do_correct()
+                                return None
+                            elif result == 'wait':
+                                return None  # waiting for second click
+                            # 'wrong' falls through to alt check
                         else:
-                            self._do_wrong()
-                            return None
+                            if self.kbd.check_modifiers_for_click(exp_mods):
+                                self._do_correct()
+                                return None
+
+                    # --- Alt shortcut check ---
+                    alt_matched = False
+                    for alt_det in sc.get('_detect_alt', []):
+                        if alt_det.get('_detect_input_type') != 'modifier_click':
+                            continue
+                        alt_click = alt_det.get('_detect_click', 'left')
+                        if not _click_type_ok(alt_click, is_left, is_right):
+                            continue
+                        alt_mods = alt_det.get('_detect_modifiers', frozenset())
+                        if alt_click == 'double':
+                            result = _try_double(alt_mods)
+                            if result == 'correct':
+                                self._do_correct()
+                                alt_matched = True
+                                break
+                            elif result == 'wait':
+                                alt_matched = True  # don't judge yet
+                                break
+                        else:
+                            if self.kbd.check_modifiers_for_click(alt_mods):
+                                self._do_correct()
+                                alt_matched = True
+                                break
+                    if alt_matched:
+                        return None
+                    self._do_wrong()
+                    return None
 
             if is_left:
                 if self.game_over:
@@ -1252,13 +1344,15 @@ class GameScreen:
                         if result is True:
                             self._do_correct()
                         elif result is False:
-                            self._do_wrong()
+                            if not self._check_alt_combo(sc):
+                                self._do_wrong()
                 else:
                     result = self.kbd.check_combo_v2(detect_opts)
                     if result is True:
                         self._do_correct()
                     elif result is False:
-                        self._do_wrong()
+                        if not self._check_alt_combo(sc):
+                            self._do_wrong()
 
             if self.state.current_shortcut:
                 if self.state.is_frozen():
@@ -1467,7 +1561,10 @@ class GameScreen:
                           ACCENT_BLUE, 13, anchor="midtop")
                 context_y += 20
             elif input_type == 'modifier_click':
-                hint_text = "Maintenez les touches + Clic souris"
+                sc = self.state.current_shortcut
+                is_dbl = sc and sc.get('_detect_click') == 'double'
+                hint_text = "Maintenez les touches + Double-clic" if is_dbl \
+                    else "Maintenez les touches + Clic souris"
                 draw_text(surface, hint_text, game_cx, context_y + 4,
                           ACCENT_BLUE, 13, anchor="midtop")
                 context_y += 20
@@ -1534,12 +1631,27 @@ class GameScreen:
                     # Input type indicator
                     if input_type == 'modifier_click':
                         reveal_y += 68
-                        draw_text(surface, "(Modificateurs + Clic souris)", game_cx, reveal_y,
+                        is_dbl = sc and sc.get('_detect_click') == 'double'
+                        _click_label = "(Modificateurs + Double-clic)" if is_dbl \
+                            else "(Modificateurs + Clic souris)"
+                        draw_text(surface, _click_label, game_cx, reveal_y,
                                   TEXT_DIM, 13, anchor="midtop")
                     elif input_type == 'single_key':
                         reveal_y += 68
                         draw_text(surface, "(Touche seule)", game_cx, reveal_y,
                                   TEXT_DIM, 13, anchor="midtop")
+
+                # Display alternative shortcuts
+                for alt in sc.get('alt', []):
+                    reveal_y += 24
+                    draw_text(surface, "ou", game_cx, reveal_y,
+                              TEXT_DIM, 12, anchor="midtop")
+                    reveal_y += 18
+                    alt_small = alt.get(_KEYS_SMALL, alt.get('keys_win', []))
+                    alt_big   = alt.get(_KEYS_BIG,   alt.get('keys_win', []))
+                    draw_key_combo(surface, alt_small, game_cx - 100, reveal_y + 14, size=20)
+                    draw_key_combo(surface, alt_big, game_cx + 100, reveal_y + 14, size=24)
+                    reveal_y += 28
 
             # Visual keyboard (always visible)
             kb_margin = 40
@@ -1641,6 +1753,16 @@ class GameScreen:
             else:
                 draw_key_combo(surface, go_big, cx, y + 22, size=30)
             y += 52
+
+            # Display alternative shortcuts in game over
+            for alt in self.game_over_answer.get('alt', []):
+                draw_text(surface, "ou", cx, y, TEXT_DIM, 11, anchor="midtop")
+                y += 16
+                alt_small = alt.get(_KEYS_SMALL, alt.get('keys_win', []))
+                alt_big   = alt.get(_KEYS_BIG,   alt.get('keys_win', []))
+                draw_key_combo(surface, alt_small, cx - 80, y + 10, size=18)
+                draw_key_combo(surface, alt_big, cx + 80, y + 10, size=22)
+                y += 30
 
         # Separator
         y += 8
@@ -1964,20 +2086,96 @@ class StatsScreen:
     """Per-certification shortcut statistics screen."""
 
     _SORT_MODES = [('rate', 'Par taux'), ('views', 'Par vues'), ('name', 'Par nom')]
-    _ROW_H = 34
-    _HEADER_H = 160  # pixels reserved above the scrollable list
+    _ROW_H = 62
+    _HEADER_H = 172  # pixels reserved above the scrollable list
 
-    def __init__(self, cert_name, cert_data):
-        self.cert_name = cert_name
-        self.cert_data = cert_data
-        self.stats = load_stats(cert_name)  # {command_name: {views, correct, total_time}}
+    def __init__(self, certifications, initial_cert=None):
+        ordered = [c for c in CERT_ORDER if c in certifications]
+        extras = sorted(c for c in certifications if c not in ordered)
+        self.cert_names = ordered + extras
+        self.certifications = certifications
+
+        if initial_cert and initial_cert in self.cert_names:
+            self.cert_index = self.cert_names.index(initial_cert)
+        else:
+            self.cert_index = 0
+
+        self.cert_name = self.cert_names[self.cert_index]
+        self.cert_data = certifications[self.cert_name]
+        self.stats = load_stats(self.cert_name)  # {command_name: {views, correct, total_time}}
         self._sort_mode = 'rate'
-        self._rows = []          # list of (shortcut, entry) sorted pairs
+        self._rows = []          # sorted shortcuts (full list)
+        self._display_rows = []  # filtered by search query
         self._scroll_y = 0.0
         self._scroll_target = 0.0
         self._sort_btn_rects = {}
         self._back_rect = None
+        self._cert_left_rect = None
+        self._cert_right_rect = None
+        self._cert_slide_pos = 0.0
+        self._cert_slide_target = 0.0
+        self._search_query = ''
+        self._search_active = False
+        self._search_rect = None
         self._build_rows()
+
+    def _change_cert(self, direction):
+        self.cert_index = (self.cert_index + direction) % len(self.cert_names)
+        self._cert_slide_target = direction * 110
+        self.cert_name = self.cert_names[self.cert_index]
+        self.cert_data = self.certifications[self.cert_name]
+        self.stats = load_stats(self.cert_name)
+        self._build_rows()
+        self._scroll_target = 0.0
+
+    @staticmethod
+    def _fmt_keys(sc, field='keys_win'):
+        """Format a shortcut's keys as a compact string, including alternatives."""
+        keys = sc.get(field, [])
+        if not keys:
+            return ''
+        input_type = sc.get('input_type', 'key_combo')
+
+        def _fmt_one(k, itype):
+            if itype == 'key_sequence':
+                parts = ['+'.join(step) if isinstance(step, list) else str(step)
+                         for step in k]
+                return '  >  '.join(parts)
+            if isinstance(k, list) and all(isinstance(x, str) for x in k):
+                # Replace Click/Right-Click with French labels
+                display = []
+                for key in k:
+                    if key == 'Click':
+                        display.append('clic')
+                    elif key == 'Double-Click':
+                        display.append('double-clic')
+                    elif key == 'Right-Click':
+                        display.append('clic droit')
+                    else:
+                        display.append(key)
+                return '+'.join(display)
+            return ''
+
+        result = _fmt_one(keys, input_type)
+        for alt in sc.get('alt', []):
+            alt_keys = alt.get(field, alt.get('keys_win', []))
+            alt_type = alt.get('input_type', input_type)
+            alt_str = _fmt_one(alt_keys, alt_type)
+            if alt_str:
+                result += ' / ' + alt_str
+        return result
+
+    def _draw_arrow(self, surface, cx, cy, direction, mouse):
+        size = 14
+        rect = pygame.Rect(cx - size - 8, cy - size - 8, (size + 8) * 2, (size + 8) * 2)
+        hov = rect.collidepoint(mouse)
+        color = _lc(ACCENT_BLUE, (255, 255, 255), 0.3 if hov else 0.0)
+        if direction == -1:
+            pts = [(cx + size // 2, cy - size), (cx - size // 2, cy), (cx + size // 2, cy + size)]
+        else:
+            pts = [(cx - size // 2, cy - size), (cx + size // 2, cy), (cx - size // 2, cy + size)]
+        pygame.draw.polygon(surface, color, pts)
+        return rect
 
     def _build_rows(self):
         """Build and sort the row list according to current sort mode."""
@@ -1999,35 +2197,81 @@ class StatsScreen:
             self._rows = sorted(all_sc, key=lambda s: _entry(s)['views'], reverse=True)
         else:
             self._rows = sorted(all_sc, key=lambda s: s.get('command_name', '').lower())
+        self._apply_filter()
+
+    def _apply_filter(self):
+        """Recompute _display_rows from _rows + current search query."""
+        q = self._search_query.lower().strip()
+        if not q:
+            self._display_rows = self._rows
+        else:
+            self._display_rows = [
+                sc for sc in self._rows
+                if (q in (sc.get('command_name') or '').lower() or
+                    q in (sc.get('context') or '').lower() or
+                    q in (sc.get('category') or '').lower() or
+                    q in self._fmt_keys(sc, 'keys_win').lower() or
+                    q in self._fmt_keys(sc, 'keys_mac').lower())
+            ]
+        self._scroll_target = 0.0
 
     def _clamp_scroll(self, h):
         viewport_h = h - self._HEADER_H - 20
-        total_h = len(self._rows) * self._ROW_H
+        total_h = len(self._display_rows) * self._ROW_H
         max_scroll = max(0, total_h - viewport_h)
         self._scroll_target = max(0.0, min(float(max_scroll), self._scroll_target))
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                return 'menu'
-            if event.key == pygame.K_DOWN:
-                self._scroll_target += self._ROW_H * 3
-            if event.key == pygame.K_UP:
-                self._scroll_target -= self._ROW_H * 3
+            if self._search_active:
+                if event.key == pygame.K_ESCAPE:
+                    if self._search_query:
+                        self._search_query = ''
+                        self._apply_filter()
+                    else:
+                        self._search_active = False
+                elif event.key == pygame.K_BACKSPACE:
+                    self._search_query = self._search_query[:-1]
+                    self._apply_filter()
+                elif event.unicode and event.unicode.isprintable():
+                    self._search_query += event.unicode
+                    self._apply_filter()
+                return None  # consume all keys when search is focused
+            else:
+                if event.key == pygame.K_ESCAPE:
+                    return 'menu'
+                if event.key == pygame.K_DOWN:
+                    self._scroll_target += self._ROW_H * 3
+                if event.key == pygame.K_UP:
+                    self._scroll_target -= self._ROW_H * 3
+                if event.key == pygame.K_LEFT:
+                    self._change_cert(-1)
+                if event.key == pygame.K_RIGHT:
+                    self._change_cert(1)
 
         if event.type == pygame.MOUSEWHEEL:
             self._scroll_target -= event.y * self._ROW_H * 3
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
+            # Toggle search focus on click
+            if self._search_rect and self._search_rect.collidepoint(pos):
+                self._search_active = True
+                return None
+            self._search_active = False
+
             if self._back_rect and self._back_rect.collidepoint(pos):
                 return 'menu'
-            for mode, rect in self._sort_btn_rects.items():
-                if rect.collidepoint(pos):
-                    self._sort_mode = mode
-                    self._build_rows()
-                    self._scroll_target = 0.0
-                    break
+            if self._cert_left_rect and self._cert_left_rect.collidepoint(pos):
+                self._change_cert(-1)
+            elif self._cert_right_rect and self._cert_right_rect.collidepoint(pos):
+                self._change_cert(1)
+            else:
+                for mode, rect in self._sort_btn_rects.items():
+                    if rect.collidepoint(pos):
+                        self._sort_mode = mode
+                        self._build_rows()
+                        break
         return None
 
     def draw(self, surface, dt=0.016):
@@ -2039,19 +2283,42 @@ class StatsScreen:
         self._scroll_y += (self._scroll_target - self._scroll_y) * _lf(0.25, dt)
 
         # ── Header ────────────────────────────────────────────────────────
-        # Title + back button
-        draw_text(surface, f"Stats  {self.cert_name}", 24, 28,
-                  ACCENT_BLUE, 28, bold=True, anchor="midleft")
-
-        back_rect = pygame.Rect(w - 120, 14, 106, 30)
-        self._back_rect = back_rect
         mouse = pygame.mouse.get_pos()
+
+        # Title (left) + Back button (right)
+        draw_text(surface, "Stats", 24, 32, ACCENT_BLUE, 26, bold=True, anchor="midleft")
+
+        back_rect = pygame.Rect(w - 120, 18, 106, 30)
+        self._back_rect = back_rect
         back_hov = back_rect.collidepoint(mouse)
         pygame.draw.rect(surface, _lc(BG_CARD, BORDER_COLOR, 0.6 if back_hov else 0.0),
                          back_rect, border_radius=6)
         pygame.draw.rect(surface, BORDER_COLOR, back_rect, width=1, border_radius=6)
         draw_text(surface, "Echap  Retour", back_rect.centerx, back_rect.centery,
                   TEXT_SECONDARY, 12, anchor="center")
+
+        # Cert carousel (centered)
+        self._cert_slide_pos += (self._cert_slide_target - self._cert_slide_pos) * _lf(0.25, dt)
+        self._cert_slide_target *= 0.70 ** (dt * 60.0)
+
+        cx = w // 2
+        cert_slide_x = cx + int(self._cert_slide_pos)
+        draw_text(surface, "CERTIFICATION", cx, 36, TEXT_DIM, 10, bold=True, anchor="midtop")
+        draw_text(surface, self.cert_name, cert_slide_x, 52,
+                  TEXT_PRIMARY, 20, bold=True, anchor="midtop")
+
+        arr_y = 62
+        self._cert_left_rect  = self._draw_arrow(surface, cx - 120, arr_y, -1, mouse)
+        self._cert_right_rect = self._draw_arrow(surface, cx + 120, arr_y,  1, mouse)
+
+        # Cert index dots
+        if len(self.cert_names) > 1:
+            dot_total = len(self.cert_names) * 10
+            dot_x = cx - dot_total // 2
+            for i in range(len(self.cert_names)):
+                col = ACCENT_BLUE if i == self.cert_index else BORDER_COLOR
+                r = 3 if i == self.cert_index else 2
+                pygame.draw.circle(surface, col, (dot_x + i * 10 + 4, 80), r)
 
         # Summary row
         all_sc = self.cert_data.get('all_shortcuts', [])
@@ -2061,15 +2328,21 @@ class StatsScreen:
         total_views = sum(e.get('views', 0) for e in self.stats.values())
         total_correct = sum(e.get('correct', 0) for e in self.stats.values())
         global_rate = int(total_correct / total_views * 100) if total_views > 0 else 0
-        summary = (f"{total} raccourcis   {seen} vus   "
-                   f"Taux global: {global_rate}%   "
-                   f"Reponses: {total_correct}/{total_views}")
-        draw_text(surface, summary, 24, 62, TEXT_SECONDARY, 13, anchor="midleft")
+        filtered_count = len(self._display_rows)
+        if self._search_query and filtered_count != total:
+            summary = (f"{filtered_count}/{total} raccourcis   "
+                       f"Taux global: {global_rate}%   "
+                       f"Reponses: {total_correct}/{total_views}")
+        else:
+            summary = (f"{total} raccourcis   {seen} vus   "
+                       f"Taux global: {global_rate}%   "
+                       f"Reponses: {total_correct}/{total_views}")
+        draw_text(surface, summary, 24, 90, TEXT_SECONDARY, 12, anchor="midleft")
 
         # Sort buttons
         sort_x = 24
-        sort_y = 85
-        btn_w, btn_h = 110, 28
+        sort_y = 108
+        btn_w, btn_h = 110, 26
         self._sort_btn_rects = {}
         for mode, label in self._SORT_MODES:
             active = (mode == self._sort_mode)
@@ -2084,11 +2357,55 @@ class StatsScreen:
                       bold=active, anchor="center")
             sort_x += btn_w + 8
 
+        # Search bar (right side of sort buttons row)
+        sb_w = 220
+        sb_rect = pygame.Rect(w - sb_w - 16, sort_y, sb_w, btn_h)
+        self._search_rect = sb_rect
+        sb_active = self._search_active
+        sb_border = ACCENT_BLUE if sb_active else BORDER_COLOR
+        sb_bg = _lc(BG_COLOR, BG_CARD, 0.9 if sb_active else 0.4)
+        pygame.draw.rect(surface, sb_bg, sb_rect, border_radius=6)
+        pygame.draw.rect(surface, sb_border, sb_rect, width=1, border_radius=6)
+
+        # Magnifier icon (circle + handle drawn with primitives)
+        ic_cx, ic_cy, ic_r = sb_rect.x + 14, sb_rect.centery, 5
+        pygame.draw.circle(surface, TEXT_DIM, (ic_cx, ic_cy), ic_r, 1)
+        pygame.draw.line(surface, TEXT_DIM,
+                         (ic_cx + ic_r - 1, ic_cy + ic_r - 1),
+                         (ic_cx + ic_r + 3, ic_cy + ic_r + 3), 1)
+
+        # Query text or placeholder
+        font_s = get_font(11, False)
+        text_x = sb_rect.x + 26
+        max_text_w = sb_w - 34 - (10 if sb_active else 0)
+        if self._search_query:
+            # Show tail of query if too long
+            q_display = self._search_query
+            while q_display and font_s.size(q_display)[0] > max_text_w:
+                q_display = q_display[1:]
+            q_surf = font_s.render(q_display, True, TEXT_PRIMARY)
+            surface.blit(q_surf, (text_x, sb_rect.centery - q_surf.get_height() // 2))
+            # Clear button (×) when query is non-empty
+            clr_x = sb_rect.right - 14
+            draw_text(surface, 'x', clr_x, sb_rect.centery, TEXT_DIM, 10, anchor="center")
+        else:
+            ph_surf = font_s.render('Rechercher...', True, TEXT_DIM)
+            surface.blit(ph_surf, (text_x, sb_rect.centery - ph_surf.get_height() // 2))
+
+        # Blinking cursor
+        if sb_active and time.time() % 1.0 < 0.6:
+            q_w = font_s.size(self._search_query)[0] if self._search_query else 0
+            # clamp to available width
+            q_w = min(q_w, max_text_w)
+            cur_x = text_x + q_w + 1
+            pygame.draw.line(surface, TEXT_PRIMARY,
+                             (cur_x, sb_rect.y + 5), (cur_x, sb_rect.bottom - 5), 1)
+
         # Column headers
-        header_y = 128
+        header_y = 154
         col_x = self._col_positions(w)
-        pygame.draw.line(surface, BORDER_COLOR, (16, header_y - 4), (w - 16, header_y - 4))
-        draw_text(surface, "COMMANDE / CATEGORIE", col_x['name'], header_y,
+        pygame.draw.line(surface, BORDER_COLOR, (16, header_y - 8), (w - 16, header_y - 8))
+        draw_text(surface, "COMMANDE / CATEGORIE / RACCOURCIS", col_x['name'], header_y,
                   TEXT_DIM, 11, bold=True, anchor="midleft")
         draw_text(surface, "VUS", col_x['views'], header_y,
                   TEXT_DIM, 11, bold=True, anchor="midright")
@@ -2096,7 +2413,7 @@ class StatsScreen:
                   TEXT_DIM, 11, bold=True, anchor="midleft")
         draw_text(surface, "TEMPS MOY.", col_x['time'], header_y,
                   TEXT_DIM, 11, bold=True, anchor="midright")
-        pygame.draw.line(surface, BORDER_COLOR, (16, header_y + 14), (w - 16, header_y + 14))
+        pygame.draw.line(surface, BORDER_COLOR, (16, header_y + 12), (w - 16, header_y + 12))
 
         # ── Scrollable rows ───────────────────────────────────────────────
         list_top = self._HEADER_H
@@ -2106,7 +2423,7 @@ class StatsScreen:
         surface.set_clip(clip_rect)
 
         scroll_int = int(self._scroll_y)
-        for i, sc in enumerate(self._rows):
+        for i, sc in enumerate(self._display_rows):
             row_y = list_top + i * self._ROW_H - scroll_int
             if row_y + self._ROW_H < list_top:
                 continue
@@ -2114,11 +2431,16 @@ class StatsScreen:
                 break
             self._draw_row(surface, sc, row_y, w, mouse, col_x)
 
+        # Empty state when search yields no results
+        if not self._display_rows and self._search_query:
+            draw_text(surface, f'Aucun raccourci pour "{self._search_query}"',
+                      w // 2, list_top + 60, TEXT_DIM, 14, anchor="center")
+
         surface.set_clip(old_clip)
 
         # Scroll indicator
-        if len(self._rows) * self._ROW_H > viewport_h:
-            total_h = len(self._rows) * self._ROW_H
+        if len(self._display_rows) * self._ROW_H > viewport_h:
+            total_h = len(self._display_rows) * self._ROW_H
             bar_h = max(30, int(viewport_h * viewport_h / total_h))
             bar_y = list_top + int(self._scroll_y / max(1, total_h - viewport_h)
                                    * (viewport_h - bar_h))
@@ -2152,20 +2474,55 @@ class StatsScreen:
         draw_text(surface, name, col_x['name'], row_y + 10,
                   TEXT_PRIMARY, 13, bold=True, anchor="midleft")
 
-        # Category (small, below name)
+        # Context (truncated to fit column width)
+        ctx = sc.get('context') or ''
+        if ctx:
+            font_ctx = get_font(10, False)
+            max_w = col_x['views'] - col_x['name'] - 20
+            while ctx and font_ctx.size(ctx)[0] > max_w:
+                ctx = ctx[:-1]
+            if ctx != sc.get('context', ''):
+                ctx = ctx.rstrip() + '...'
+            draw_text(surface, ctx, col_x['name'], row_y + 23,
+                      TEXT_DIM, 10, anchor="midleft")
+
+        # Category (small, dimmer, below context)
         cat = sc.get('category', '')
         if cat:
-            draw_text(surface, cat, col_x['name'], row_y + 24,
-                      TEXT_DIM, 10, anchor="midleft")
+            draw_text(surface, cat, col_x['name'], row_y + 35,
+                      (60, 65, 85), 9, anchor="midleft")
+
+        # Shortcut keys (Win and Mac notations)
+        win_txt = self._fmt_keys(sc, 'keys_win')
+        mac_txt = self._fmt_keys(sc, 'keys_mac')
+        font_k = get_font(10, False)
+        kx = col_x['name']
+        key_y = row_y + 50
+        if win_txt:
+            win_col = ACCENT_BLUE if not IS_MAC else TEXT_DIM
+            s = font_k.render(win_txt, True, win_col)
+            surface.blit(s, (kx, key_y - s.get_height() // 2))
+            kx += s.get_width()
+        if win_txt and mac_txt:
+            sep = font_k.render('  ·  ', True, TEXT_DIM)
+            surface.blit(sep, (kx, key_y - sep.get_height() // 2))
+            kx += sep.get_width()
+        if mac_txt:
+            mac_col = ACCENT_GREEN if IS_MAC else TEXT_DIM
+            s = font_k.render(mac_txt, True, mac_col)
+            surface.blit(s, (kx, key_y - s.get_height() // 2))
+
+        # Stats columns — vertically centered in the row
+        stat_y = row_y + 31
 
         # Views count
         views_col = TEXT_DIM if views == 0 else TEXT_SECONDARY
         draw_text(surface, str(views) if views > 0 else '-',
-                  col_x['views'], row_y + 17, views_col, 12, anchor="midright")
+                  col_x['views'], stat_y, views_col, 12, anchor="midright")
 
         # Rate bar + percentage
         bar_x = col_x['rate']
-        bar_y = row_y + 13
+        bar_y = row_y + 27
         bar_w = 100
         bar_h = 8
         if views > 0:
@@ -2183,19 +2540,19 @@ class StatsScreen:
             if fill_w > 0:
                 pygame.draw.rect(surface, bar_color,
                                  pygame.Rect(bar_x, bar_y, fill_w, bar_h), border_radius=3)
-            draw_text(surface, f"{pct}%", bar_x + bar_w + 8, row_y + 17,
+            draw_text(surface, f"{pct}%", bar_x + bar_w + 8, stat_y,
                       bar_color, 11, anchor="midleft")
         else:
-            draw_text(surface, '-', bar_x + bar_w // 2, row_y + 17,
+            draw_text(surface, '-', bar_x + bar_w // 2, stat_y,
                       TEXT_DIM, 11, anchor="center")
 
         # Avg time
         if correct > 0:
             avg = total_time / correct
-            draw_text(surface, f"{avg:.1f}s", col_x['time'], row_y + 17,
+            draw_text(surface, f"{avg:.1f}s", col_x['time'], stat_y,
                       TEXT_SECONDARY, 12, anchor="midright")
         else:
-            draw_text(surface, '-', col_x['time'], row_y + 17,
+            draw_text(surface, '-', col_x['time'], stat_y,
                       TEXT_DIM, 12, anchor="midright")
 
 

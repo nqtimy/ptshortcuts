@@ -53,6 +53,12 @@ echo.
 echo Building standalone .exe ...
 echo.
 
+REM Include Supabase config if present (embeds the anon key in the exe)
+set SUPABASE_DATA=
+if exist supabase_config.json (
+    set SUPABASE_DATA=--add-data "supabase_config.json;."
+)
+
 %PYTHON% -m PyInstaller ^
     --onefile ^
     --windowed ^
@@ -60,6 +66,7 @@ echo.
     --manifest ptshortcuts.manifest ^
     --add-data "shortcuts;shortcuts" ^
     --add-data "assets;assets" ^
+    %SUPABASE_DATA% ^
     --hidden-import pynput.keyboard._win32 ^
     --hidden-import pynput.mouse._win32 ^
     main.py
