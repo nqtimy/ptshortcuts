@@ -80,7 +80,7 @@ def main():
                             game_screen = None
                             menu.selected = None
                             menu.selected_difficulty = None
-                            menu.selected_review = False
+                            menu.selected_custom = False
                             kbd.clear()
                         elif current_screen == 'stats':
                             current_screen = 'menu'
@@ -131,15 +131,45 @@ def main():
 
             # Check menu selection
             if current_screen == 'menu' and menu.selected:
-                cert_name = menu.selected
                 max_diff = menu.selected_difficulty or 3
-                review = menu.selected_review
-                if cert_name in certifications:
-                    game_screen = GameScreen(cert_name, certifications[cert_name], kbd,
-                                            max_difficulty=max_diff, review_mode=review,
-                                            timer_enabled=menu.selected_timer)
-                    current_screen = 'game'
-                    kbd.clear()
+                is_custom = menu.selected_custom
+                sel = menu.selected
+                # In custom mode, `selected` is a list of cert names; merge them.
+                if is_custom and isinstance(sel, list) and sel:
+                    all_sc = []
+                    cats = []
+                    for c in sel:
+                        if c not in certifications:
+                            continue
+                        cd = certifications[c]
+                        all_sc.extend(cd.get('all_shortcuts', []))
+                        cats.extend(cd.get('category_names', []))
+                    if all_sc:
+                        merged = {'all_shortcuts': all_sc, 'category_names': cats}
+                        label = sel[0] if len(sel) == 1 else "Custom"
+                        # In custom mode, all difficulties are available.
+                        game_screen = GameScreen(
+                            label, merged, kbd,
+                            max_difficulty=3,
+                            custom_mode=True,
+                            timer_enabled=menu.selected_timer,
+                            custom_bonus=menu.selected_bonus,
+                            custom_show_answer=menu.selected_show_answer,
+                            custom_random=menu.selected_random,
+                        )
+                        current_screen = 'game'
+                        kbd.clear()
+                elif not is_custom:
+                    cert_name = sel
+                    if cert_name in certifications:
+                        game_screen = GameScreen(
+                            cert_name, certifications[cert_name], kbd,
+                            max_difficulty=max_diff,
+                            custom_mode=False,
+                            timer_enabled=True,
+                        )
+                        current_screen = 'game'
+                        kbd.clear()
 
             # Update
             if current_screen == 'game' and game_screen:

@@ -51,6 +51,8 @@ class GameState:
         # gameplay. `is_power_unlocked()` uses lifetime score.
         self.upgrade_counts = {k: 0 for k in POWERS}
         self.upgrade_costs = {k: v['use_cost'] for k, v in POWERS.items()}
+        # Custom mode flag: when True, all powers are unlocked AND free.
+        self.free_upgrades = False
 
         # Active effects
         self.freeze_until = 0.0
@@ -119,17 +121,27 @@ class GameState:
 
     # ── Score-gated powers (Design v4) ────────────────────────────────────
     def is_power_unlocked(self, power_id):
-        """A power is permanently unlocked once lifetime score ≥ unlock_cost."""
+        """A power is permanently unlocked once lifetime score ≥ unlock_cost.
+
+        In custom mode (`free_upgrades`), every power is unlocked from the start.
+        """
         p = POWERS.get(power_id)
         if p is None:
             return False
+        if self.free_upgrades:
+            return True
         return self.total_score >= p['unlock_cost']
 
     def can_use_power(self, power_id):
-        """Unlocked AND available score covers the use cost."""
+        """Unlocked AND available score covers the use cost.
+
+        In custom mode (`free_upgrades`), powers are always usable.
+        """
         p = POWERS.get(power_id)
         if p is None:
             return False
+        if self.free_upgrades:
+            return True
         return self.is_power_unlocked(power_id) and self.available_score >= p['use_cost']
 
     def power_unlock_progress(self, power_id):
@@ -148,7 +160,8 @@ class GameState:
         """
         if not self.can_use_power(power_id):
             return False
-        self.spent_score += POWERS[power_id]['use_cost']
+        if not self.free_upgrades:
+            self.spent_score += POWERS[power_id]['use_cost']
         if power_id == 'skip':
             self.skipped = True
         elif power_id == 'reveal':

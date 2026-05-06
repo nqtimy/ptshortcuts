@@ -210,13 +210,44 @@ Appliqué uniquement quand `not IS_MAC` à 3 sites de rendu :
 **La détection n'est jamais affectée** : elle continue d'utiliser les noms QWERTY positionnels via scan codes. La traduction est purement cosmétique pour le rendu sur le côté "Ton clavier (AZERTY)".
 
 ## Menu principal
-- **Carrousel certification** : navigation gauche/droite entre les certifs (CERT_ORDER dans screens.py). Animation slide (position/target lerp, ±110px) + mini bar-chart difficulté dans la carte.
-- **Pills difficulté** : 3 boutons cliquables (Facile/Interm./Difficile) avec hover fade. Raccourcis clavier 1/2/3 pour changer directement.
-- **Mode Révision** : toggle (touche R ou clic) — raccourcis toujours visibles, score non sauvegardé, upgrades désactivés, playlist séquentielle avec reshuffle en boucle, timeout = skip (pas game over).
+- **Carrousel certification** (mode classique) : navigation gauche/droite entre les certifs (CERT_ORDER dans screens.py). Animation slide (position/target lerp, ±110px) + mini bar-chart difficulté dans la carte.
+- **Pills difficulté** (mode classique) : 3 boutons cliquables (Facile/Interm./Difficile) avec hover fade. Raccourcis clavier 1/2/3 pour changer directement.
+- **Mode Custom** (toggle touche C ou clic) : remplace carrousel + pills par un panneau d'options + checklist de certifs. Voir section dédiée plus bas.
 - **Pseudo** : champ saisie bas-gauche, persisté dans save.json, utilisé pour le leaderboard.
 - **Liens rapides** bas-droite : bouton ALP et bouton "Choose your vibe" via `webbrowser.open()`.
-- **Coming Soon** : certifs `{'210P', '205D', '210D'}` (constante `COMING_SOON` dans screens.py) — bouton JOUER grisé.
-- **Touches** : S → StatsScreen, L → LeaderboardScreen, R → toggle review mode.
+- **Coming Soon** : certifs `{'210P', '205D', '210D'}` (constante `COMING_SOON` dans screens.py) — bouton JOUER grisé en mode classique, et entrées non-cochables (label "Soon") dans la checklist custom.
+- **Touches** : S → StatsScreen, L → LeaderboardScreen, C → toggle Mode Custom. Flèches/1-2-3 désactivées quand Mode Custom est actif.
+
+## Mode Custom (révision libre)
+Sandbox de révision configurable, qui remplace l'ancien Mode Révision. Activable depuis le menu (touche C ou bouton "Mode Custom").
+
+### UI
+Quand `MenuScreen.custom_mode = True`, le carrousel + pills de difficulté sont remplacés par `_draw_custom_panel()` :
+- **Colonne gauche — Options** : 4 toggles cliquables (Timer / Bonus (gratuits) / Afficher les réponses / Ordre aléatoire)
+- **Colonne droite — Certifications** : grille 2 colonnes de checkboxes (cliquables hors COMING_SOON). Au moins une certif doit rester cochée.
+- Le panneau retourne `original_top + 262` pour que la barre de séparation, le toggle "Mode Custom" et le bouton JOUER restent à la même position Y que le mode classique (évite le saut visuel quand on bascule).
+
+### Flags MenuScreen
+- `custom_mode: bool` — toggle global
+- `timer_enabled: bool` — timer ON/OFF
+- `custom_bonus: bool` — powers visibles + utilisables (gratuits)
+- `custom_show_answer: bool` — raccourci visible en permanence sur la carte "APPUYEZ SUR" + touches highlightées sur le clavier visuel
+- `custom_random: bool` — ON = shuffle, OFF = ordre par difficulté croissante
+- `custom_certs: set[str]` — certifs cochées dans le checklist (par défaut : la première certif jouable)
+
+### Lancement (main.py)
+Quand l'utilisateur clique JOUER en mode custom, `MenuScreen._commit_selection()` met `selected = list[str]` (signal multi-cert). `main.py` détecte que `selected` est une liste, fusionne `all_shortcuts` + `category_names` des certs cochées en un cert virtuel ("Custom" si plusieurs, nom unique sinon), puis instancie `GameScreen` avec `custom_mode=True` + les 4 flags.
+
+### Comportement en jeu (GameScreen)
+- **Pas de save** : `_save()` retourne tôt si `custom_mode` (pas de score, pas de stats persistées, pas de highscore)
+- **Pas d'achievements** : `_unlock_achievement()` retourne tôt si `custom_mode`
+- **Pas de déblocage de leçons** : la carte "DÉBLOQUER LEÇON" est cachée. Si `custom_bonus`, toutes les catégories sont pré-débloquées dans l'init.
+- **Bonus gratuits** : `state.free_upgrades = True` quand `custom_bonus` activé. Patch dans `is_power_unlocked()`, `can_use_power()`, `use_power()` pour bypass les coûts. Affichage "GRATUIT" sur les power cards.
+- **Panel powers** : `self._show_bonus_panel = (not custom_mode) or custom_bonus`. Quand False, la rangée des 4 powers est skippée dans le draw.
+- **Show answer** : la condition `self.state.revealed or self.custom_show_answer` remplace l'ancienne `self.state.revealed or self.review_mode` aux 3 sites de rendu (reveal fade target, "APPUYEZ SUR" keys, expected_keys du clavier visuel).
+- **Timer** : `timer_enabled` contrôle si le timer tourne. Si timer activé en custom mode et expire, le shortcut est skippé (pas de game over) — comme l'ancien mode review.
+- **Playlist** : `_build_custom_playlist()` filtre par `max_difficulty=3`, puis `random.shuffle()` si `custom_random` sinon `sort(key=difficulty)`. Reshuffle/repasse en boucle quand `_custom_index` atteint la fin.
+- **Banner** : "CUSTOM N/total" affiché dans le top bar à la place du nom de catégorie.
 
 ## Système d'animation du menu (MenuScreen)
 Toutes les animations vivent dans `MenuScreen` (screens.py), pas de thread séparé.
@@ -226,13 +257,13 @@ Toutes les animations vivent dans `MenuScreen` (screens.py), pas de thread sépa
 - `_bg_particles` : liste de particules ambiantes `[x, y, vx, vy, alpha_scale, color_idx]`
 - `_particle_layer` : surface SRCALPHA réutilisée pour les particules (évite les allocations)
 - `_play_gravity` : `[x, y]` offset magnétique du bouton JOUER
-- `_review_mode_t` : `0.0→1.0` transition couleur page (bleu→rouge), lerp à 5%/frame (~1s)
+- `_custom_mode_t` : `0.0→1.0` transition couleur page (bleu→rouge), lerp à 5%/frame (~1s) — pilote toutes les couleurs `page_accent` quand on bascule en Mode Custom
 - `_cert_slide_pos/target` : système position/target pour le slide certif sans saccade
 - `_pill_hover_t` : `[0,0,0]` hover fade des 3 pills difficulté
 - Divers `_*_hover_t` : hover fades des boutons et flèches
 
 ### Animations automatiques (chaque frame)
-- **Waveform separator** : 40 barres cylindriques bleu→violet (review: rouge→orange), amplitude sin(), envelope sin(t*π)
+- **Waveform separator** : 40 barres cylindriques bleu→violet (custom: rouge→orange), amplitude sin(), envelope sin(t*π)
 - **Particules ambiantes** : 42 points max, montent depuis le bas, parallaxe souris (8px/4px)
 
 ### Animations interactives (souris)
@@ -257,7 +288,7 @@ Les couleurs de fond/bordure/texte sont interpolées avec `_lc()`.
 ## Concepts clés
 - **Score** : repart à 0 chaque partie. Upgrades achetés et catégories débloquées persistent via save.json.
 - **Combo** : streak de réponses correctes, multiplie les points. Reset à 0 sur erreur.
-- **Timer** : diminue avec le niveau. Quand il expire → game over (pas juste skip). En review mode → skip.
+- **Timer** : diminue avec le niveau. Quand il expire → game over (pas juste skip). En Mode Custom → skip (pas de game over).
 - **Difficulté 3** : n'apparaît qu'après 200pts (DIFF3_UNLOCK_SCORE dans config.py).
 - **Poids adaptatifs** : `get_weighted_shortcuts()` dans loader.py ajuste le weight selon le taux de réussite. `factor = max(0.3, 2.0 - 1.7 * rate)` — les raccourcis ratés apparaissent plus souvent.
 - **Freeze timer** : fonctionne en poussant timer_start en avant de dt chaque frame (dans screens.py update).
