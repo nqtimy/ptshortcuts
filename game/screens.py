@@ -26,6 +26,31 @@ else:
     _COLOR_BIG   = ACCENT_BLUE
 _DBLCLICK_THRESHOLD = 0.4  # seconds max between two clicks for a double-click
 
+# QWERTY position name → AZERTY character displayed at the same physical key.
+# Used only for DISPLAY on the "Ton clavier (AZERTY)" side. Detection still
+# uses QWERTY positional names everywhere (scan-code based).
+_QWERTY_TO_AZERTY_DISPLAY = {
+    'Q': 'A', 'W': 'Z', 'A': 'Q', 'Z': 'W', 'M': ',',
+    ';': 'M', "'": 'ù', ',': ';', '.': ':', '/': '!',
+    '[': '^', ']': '$', '\\': '*', '`': '²',
+    '-': ')', '=': '=',
+}
+
+def _to_azerty_display(keys):
+    """Translate a flat list of key names from QWERTY-positional to AZERTY
+    characters (display only). Preserves modifiers, function keys, numpad,
+    arrows, digits unchanged. On Mac, this is a no-op at call sites because
+    _KEYS_BIG is 'keys_mac' there."""
+    if not keys:
+        return keys
+    return [_QWERTY_TO_AZERTY_DISPLAY.get(k, k) for k in keys]
+
+def _to_azerty_display_seq(steps):
+    """Same as _to_azerty_display but for key_sequence (list of lists)."""
+    if not steps:
+        return steps
+    return [_to_azerty_display(step) for step in steps]
+
 from game.loader import get_shortcuts_for_categories, get_weighted_shortcuts
 from game.particles import (
     ScorePopup, RingParticle, spawn_explosion, spawn_sparks,
@@ -36,6 +61,11 @@ from game.renderer import (
     draw_key_combo, draw_key_sequence, draw_particles, draw_rounded_rect,
     draw_score_popups, draw_shadow_rect, draw_text, draw_text_glow,
     draw_timer_bar, draw_vignette, get_font,
+    # Design v4 helpers
+    draw_text_gradient, draw_gradient_rect, draw_radial_halo, draw_padlock,
+    draw_progress_bar, draw_corner_frame,
+    ease_out_cubic, lerp_color, lerp_color_stops, frame_lerp,
+    _get_glow_surface,
 )
 from game.achievements import ACHIEVEMENTS
 from game.leaderboard import save_local_highscore, submit_score_async
@@ -291,9 +321,13 @@ class MenuScreen:
         mouse = pygame.mouse.get_pos()
         self._review_mode_t += ((1.0 if self.review_mode else 0.0) - self._review_mode_t) * _lf(0.05, dt)
         rmt = self._review_mode_t
-        page_accent = _lc(ACCENT_BLUE, ACCENT_RED, rmt)
-        page_accent2 = _lc(ACCENT_PURPLE, ACCENT_ORANGE, rmt)
+        # Design v4: violet/pink in normal mode, red/orange in review mode
+        page_accent = _lc(ACCENT_PURPLE, ACCENT_RED, rmt)
+        page_accent2 = _lc(ACCENT_PINK, ACCENT_ORANGE, rmt)
         surface.fill(BG_COLOR)
+        # Signature violet radial halo at top
+        draw_radial_halo(surface, w // 2, 0, int(w * 0.6), 280,
+                         page_accent, alpha=int(50 - 10 * rmt), falloff=2.2)
 
         # ── Ambient background particles ───────────────────────────────────
         if len(self._bg_particles) < 42 and random.random() < _lf(0.18, dt):
@@ -326,13 +360,20 @@ class MenuScreen:
 
         # ── Title ─────────────────────────────────────────────────────────
         title_y = int(h * 0.06)
-        draw_text_glow(surface, "PT Shortcuts", w // 2, title_y, page_accent,
-                       size=58, bold=True, anchor="midtop", glow_alpha=45)
-        draw_text(surface, "Pro Tools Keyboard Trainer", w // 2, title_y + 68,
+        # Design v4 gradient: white → violet → pink (red/orange in review mode)
+        title_stops = [
+            (0.0, TEXT_PRIMARY),
+            (0.55, page_accent),
+            (1.0, page_accent2),
+        ]
+        draw_text_gradient(surface, "PT Shortcuts", w // 2, title_y + 32, title_stops,
+                           size=72, bold=True, anchor="center",
+                           glow_color=page_accent, glow_alpha=60)
+        draw_text(surface, "Pro Tools Keyboard Trainer", w // 2, title_y + 76,
                   TEXT_SECONDARY, 20, anchor="midtop")
 
         # ── Animated waveform separator ───────────────────────────────────
-        sep_y = title_y + 110
+        sep_y = title_y + 140
         bar_count = 40
         wave_w = min(500, w - 200)
         bar_spacing = wave_w / bar_count
@@ -396,9 +437,14 @@ class MenuScreen:
                        radius=14, glow_radius=12, glow_alpha=25)
         pygame.draw.rect(surface, BORDER_COLOR, card_rect, width=1, border_radius=14)
 
-        # Left accent bar
+        # Left gradient accent bar (violet → pink)
         accent_rect = pygame.Rect(card_rect.x + 1, card_rect.y + 14, 4, card_rect.h - 28)
-        pygame.draw.rect(surface, page_accent, accent_rect, border_radius=2)
+        draw_gradient_rect(surface, accent_rect, page_accent, page_accent2,
+                           radius=2, direction="vertical")
+
+        # Design v4 L-shape corner decorations
+        draw_corner_frame(surface, card_rect, page_accent, length=16,
+                          thickness=2, alpha=180)
 
         # Cert name
         draw_text(surface, cert_name, card_rect.x + 20, card_rect.y + 18,
@@ -420,7 +466,10 @@ class MenuScreen:
         n2 = sum(1 for s in cert_data.get('all_shortcuts', []) if s.get('difficulty', 1) == 2)
         n3 = sum(1 for s in cert_data.get('all_shortcuts', []) if s.get('difficulty', 1) == 3)
         total_diff = max(1, n1 + n2 + n3)
-        bar_right = card_rect.right - 16
+        # Reserve space on the right for the count label so 2- and 3-digit
+        # numbers don't overflow the card border.
+        count_label_w = 22
+        bar_right = card_rect.right - 16 - count_label_w
         bar_w_max = 90
         bar_h = 7
         bar_gap = 5
@@ -432,7 +481,8 @@ class MenuScreen:
             fill_w = max(4, int(bar_w_max * count / total_diff))
             pygame.draw.rect(surface, color,
                              (bar_right - bar_w_max, by, fill_w, bar_h), border_radius=3)
-            draw_text(surface, str(count), bar_right + 6, by, TEXT_DIM, 11, anchor="topleft")
+            draw_text(surface, str(count), card_rect.right - 10, by,
+                      TEXT_DIM, 11, anchor="topright")
 
         # Spotlight: radial glow following mouse inside card
         if card_rect.collidepoint(mouse):
@@ -471,7 +521,7 @@ class MenuScreen:
 
         # ── Difficulty Pills ───────────────────────────────────────────────
         diff_top = dot_y + 20
-        draw_text(surface, "DIFFICULTE", w // 2, diff_top, TEXT_DIM, 12,
+        draw_text(surface, "DIFFICULTÉ", w // 2, diff_top, TEXT_DIM, 12,
                   bold=True, anchor="midtop")
         diff_top += 20
 
@@ -561,7 +611,7 @@ class MenuScreen:
         pygame.draw.circle(surface, knob_color, (knob_x, tog_y), tog_h // 2 - 2)
 
         lbl_color = _lc(TEXT_SECONDARY, TEXT_PRIMARY, rmt)
-        draw_text(surface, "Mode Revision", tog_rect.right + 10, review_rect.centery - 6,
+        draw_text(surface, "Mode Révision", tog_rect.right + 10, review_rect.centery - 6,
                   lbl_color, 15, bold=self.review_mode, anchor="midleft")
         draw_text(surface, "[R]", tog_rect.right + 10, review_rect.centery + 10,
                   ACCENT_PURPLE if self.review_mode else TEXT_DIM, 11, anchor="midleft")
@@ -607,24 +657,11 @@ class MenuScreen:
         else:
             self._timer_rect = None
 
-        # Play button (right of center) — magnetic gravity toward mouse
+        # Play button (right of center) — fixed position (no gravity/shake)
         play_w = 196
         play_h = 54
-        base_play_cx = w // 2 + 14 + play_w // 2
-        base_play_cy = ctrl_top - 4 + play_h // 2
-        dist_x = mouse[0] - base_play_cx
-        dist_y = mouse[1] - base_play_cy
-        dist = math.sqrt(dist_x ** 2 + dist_y ** 2)
-        if dist < 120 and dist > 0:
-            strength = (1 - dist / 120) ** 2 * 9
-            target_gx = dist_x / dist * strength
-            target_gy = dist_y / dist * strength
-        else:
-            target_gx, target_gy = 0.0, 0.0
-        self._play_gravity[0] += (target_gx - self._play_gravity[0]) * _lf(0.18, dt)
-        self._play_gravity[1] += (target_gy - self._play_gravity[1]) * _lf(0.18, dt)
-        play_x = w // 2 + 14 + int(self._play_gravity[0])
-        play_y = ctrl_top - 4 + int(self._play_gravity[1])
+        play_x = w // 2 + 14
+        play_y = ctrl_top - 4
         play_rect = pygame.Rect(play_x, play_y, play_w, play_h)
         self._play_rect = play_rect
         hover_play = play_rect.collidepoint(mouse)
@@ -647,21 +684,33 @@ class MenuScreen:
         else:
             self._play_hover_t += ((1.0 if hover_play else 0.0) - self._play_hover_t) * _lf(0.14, dt)
             pht = self._play_hover_t
-            play_color = _lc(ACCENT_GREEN, page_accent, rmt)
-            pulse_color = (int(play_color[0] * pulse), int(play_color[1] * pulse),
-                           int(play_color[2] * pulse))
-            glow_a = int(pht * 80)
-            draw_glow_rect(surface, play_rect, _lc(BG_CARD, pulse_color, pht),
-                           play_color, radius=12, glow_radius=16, glow_alpha=glow_a)
-            pygame.draw.rect(surface, pulse_color, play_rect, width=2, border_radius=12)
+            # Design v4: violet → pink gradient body with a soft halo behind it
+            col_a = page_accent
+            col_b = page_accent2
+            # Soft outer halo (not additive — just a falloff surface)
+            halo_a = int(60 + pht * 70 + pulse * 14)
+            halo_r = 22
+            halo = _get_glow_surface(play_rect.w, play_rect.h, col_a,
+                                     radius=halo_r, alpha=halo_a)
+            surface.blit(halo, (play_rect.x - halo_r, play_rect.y - halo_r))
+            # Gradient body
+            draw_gradient_rect(surface, play_rect, col_a, col_b,
+                               radius=12, direction="horizontal")
+            # Hover brighten overlay (masked to the rounded shape)
+            if pht > 0.02:
+                hov = pygame.Surface((play_rect.w, play_rect.h), pygame.SRCALPHA)
+                pygame.draw.rect(hov, (255, 255, 255, int(28 * pht)),
+                                 (0, 0, play_rect.w, play_rect.h),
+                                 border_radius=12)
+                surface.blit(hov, play_rect.topleft)
             draw_text(surface, "JOUER", play_rect.centerx, play_rect.centery - 8,
-                      _lc(play_color, BG_COLOR, pht), 28, bold=True, anchor="center")
+                      (255, 255, 255), 30, bold=True, anchor="center")
             draw_text(surface, f"{n_at_diff} raccourcis", play_rect.centerx,
-                      play_rect.centery + 14, TEXT_DIM, 12, anchor="center")
+                      play_rect.centery + 14, (240, 240, 255), 12, anchor="center")
 
         # ── Footer ────────────────────────────────────────────────────────
         draw_text(surface,
-                  "Fleches: certif  |  1/2/3: difficulte  |  R: revision  |  S: stats  |  L: classement  |  Entree: jouer  |  Echap: quitter",
+                  "Flèches: certif  |  1/2/3: difficulté  |  R: révision  |  S: stats  |  L: classement  |  Entrée: jouer  |  Echap: quitter",
                   w // 2, h - 18, TEXT_DIM, 12, anchor="midbottom")
 
         # ── Bottom-right quick links ───────────────────────────────────────
@@ -819,6 +868,27 @@ _KB_ROWS = [
 ]
 _KB_TOTAL_UNITS = 15.0  # approx row width in units
 
+# Numpad layout (Design v4). Each entry: (label, internal_name, col, row,
+# col_span, row_span). 4 columns × 5 rows grid.
+_NUMPAD_KEYS = [
+    ('/',     'Num/',     0, 0, 1, 1),
+    ('*',     'Num*',     1, 0, 1, 1),
+    ('-',     'Num-',     2, 0, 1, 1),
+    ('7',     'Num7',     0, 1, 1, 1),
+    ('8',     'Num8',     1, 1, 1, 1),
+    ('9',     'Num9',     2, 1, 1, 1),
+    ('+',     'Num+',     3, 1, 1, 2),
+    ('4',     'Num4',     0, 2, 1, 1),
+    ('5',     'Num5',     1, 2, 1, 1),
+    ('6',     'Num6',     2, 2, 1, 1),
+    ('1',     'Num1',     0, 3, 1, 1),
+    ('2',     'Num2',     1, 3, 1, 1),
+    ('3',     'Num3',     2, 3, 1, 1),
+    ('Ent',   'NumEnter', 3, 3, 1, 2),
+    ('0',     'Num0',     0, 4, 2, 1),
+    ('.',     'Num.',     2, 4, 1, 1),
+]
+
 
 # ---------------------------------------------------------------------------
 # Game Screen
@@ -855,11 +925,29 @@ class GameScreen:
         self.shake_y = 0
 
         # Rects
-        self.upgrade_rects = {}
-        self.cat_unlock_rect = None
+        self.upgrade_rects = {}       # legacy name, now holds PowerCard rects
+        self.cat_unlock_rect = None   # "Leçon suivante" button
         self.back_rect = None
         self.hovered_upgrade = None
-        self.action_rects = {}
+        self.action_rects = {}        # kept for legacy click routing (unused in v4)
+        self._power_hover_t = {k: 0.0 for k in POWERS}
+
+        # ── Design v4: animation state ────────────────────────────────────
+        # Animated score counter (eases toward available_score over 600ms)
+        self._display_score = 0.0
+        self._score_anim_from = 0.0
+        self._score_anim_to = 0.0
+        self._score_anim_start = 0.0
+        self._last_score_target = 0  # detect changes → restart anim
+        # Flash on correct (0..1 decays after correct answer)
+        self._score_flash_t = 0.0
+        self._combo_bump_t = 0.0      # popIn animation on combo change
+        self._prev_combo_bump = 0
+        # Keycap reveal fade-in (0..1 lerps to 1 when revealed)
+        self._reveal_fade_t = 0.0
+        # Unlock-lesson button "DISPONIBLE!" pulse
+        self._lesson_available_t = 0.0
+        self._lesson_was_available = False
 
         # Game over
         self.game_over = False
@@ -867,6 +955,9 @@ class GameScreen:
         self.game_over_restart_rect = None
         self.game_over_menu_rect = None
         self.game_over_answer = None
+        self._go_restart_hover_t = 0.0
+        self._go_menu_hover_t = 0.0
+        self._go_last_draw = 0.0
 
         # Previous combo (to detect milestones)
         self._prev_combo = 0
@@ -944,33 +1035,53 @@ class GameScreen:
         self.kbd.clear()
         self._record_view(chosen)
 
-    def _check_alt_combo(self, sc):
-        """Check alternative shortcuts. Returns True if any alt matches (and triggers correct)."""
+    def _collect_combo_options(self, sc):
+        """Return a combined list of _detect_key_options for the main shortcut
+        plus all non-modifier-only alt variants. Used in a single
+        check_combo_v2 call so we don't consume the combo during the main
+        check and miss alts on the follow-up.
+        """
+        opts = list(sc.get('_detect_key_options', []))
         for alt_det in sc.get('_detect_alt', []):
             alt_type = alt_det.get('_detect_input_type', 'key_combo')
             alt_opts = alt_det.get('_detect_key_options', [])
             if not alt_opts:
                 continue
-            if alt_type == 'single_key':
+            if alt_type in ('key_combo', 'single_key'):
                 first_opt = next(iter(alt_opts[0])) if alt_opts else ''
-                if first_opt in ('Win', 'Ctrl', 'Shift', 'Alt'):
-                    if self.kbd.check_modifier_only(alt_det.get('_detect_modifiers')) is True:
-                        self._do_correct()
-                        return True
-                else:
-                    if self.kbd.check_combo_v2(alt_opts) is True:
-                        self._do_correct()
-                        return True
-            elif alt_type == 'key_combo':
-                if self.kbd.check_combo_v2(alt_opts) is True:
+                # Skip pure-modifier alts — they use check_modifier_only
+                if first_opt not in ('Win', 'Ctrl', 'Shift', 'Alt'):
+                    opts.extend(alt_opts)
+        return opts
+
+    def _check_alt_modifier_only(self, sc):
+        """Check modifier-only alts (rare — e.g. Shift as an alt of Ctrl)."""
+        for alt_det in sc.get('_detect_alt', []):
+            if alt_det.get('_detect_input_type') != 'single_key':
+                continue
+            alt_opts = alt_det.get('_detect_key_options', [])
+            if not alt_opts:
+                continue
+            first_opt = next(iter(alt_opts[0]))
+            if first_opt in ('Win', 'Ctrl', 'Shift', 'Alt'):
+                if self.kbd.check_modifier_only(
+                        alt_det.get('_detect_modifiers')) is True:
                     self._do_correct()
                     return True
         return False
+
+    def _check_alt_combo(self, sc):
+        """Legacy alias kept for callers that only care about modifier-only
+        alts post-consumption. Non-modifier alts should be folded into the
+        main check_combo_v2 call via _collect_combo_options.
+        """
+        return self._check_alt_modifier_only(sc)
 
     def _do_correct(self):
         response_time = max(0.0, time.time() - self._shortcut_shown_at)
         self._record_correct(self.state.current_shortcut)
         points = self.state.on_correct()
+        self._score_flash_t = 1.0  # design v4: scoreUp animation
         self._check_achievements_correct(response_time)
         w = pygame.display.get_surface().get_size()[0]
         center_x = (w - 260) // 2
@@ -1030,7 +1141,7 @@ class GameScreen:
 
         w = pygame.display.get_surface().get_size()[0]
         center_x = (w - 260) // 2
-        self.popups.append(ScorePopup("RATE", center_x, 280, ACCENT_RED))
+        self.popups.append(ScorePopup("RATÉ", center_x, 280, ACCENT_RED))
         self.particles.extend(spawn_wrong_burst(center_x, 300, PARTICLES_WRONG))
         self._save()
 
@@ -1251,34 +1362,22 @@ class GameScreen:
                     return 'menu'
 
                 if not self.review_mode:
+                    # Score-gated power cards
                     for uid, rect in self.upgrade_rects.items():
                         if rect.collidepoint(pos):
-                            if self.state.buy_upgrade(uid):
+                            if self.state.use_power(uid):
                                 self._unlock_achievement('upgrade_1')
                                 if uid == 'skip':
-                                    self.state.use_skip()
                                     self._next_shortcut()
-                                elif uid == 'freeze':
-                                    self.state.use_freeze()
+                                elif uid == 'reveal':
+                                    self._unlock_achievement('reveal_1')
                             return None
 
+                    # Unlock next lesson
                     if self.cat_unlock_rect and self.cat_unlock_rect.collidepoint(pos):
                         if self.state.unlock_next_category():
                             self._unlock_achievement('cat_unlock')
                         return None
-
-                    for action, rect in self.action_rects.items():
-                        if rect.collidepoint(pos):
-                            if action == 'skip' and self.state.use_skip():
-                                self._next_shortcut()
-                            elif action == 'reveal':
-                                self.state.use_reveal()
-                                self._unlock_achievement('reveal_1')
-                            elif action == 'freeze':
-                                self.state.use_freeze()
-                            elif action == 'double':
-                                self.state.use_double()
-                            return None
         return None
 
     def update(self, dt):
@@ -1340,18 +1439,22 @@ class GameScreen:
                         if result is True:
                             self._do_correct()
                     else:
-                        result = self.kbd.check_combo_v2(detect_opts)
+                        # Include alts in the same check so we don't consume
+                        # the combo on the main check and lose it.
+                        all_opts = self._collect_combo_options(sc)
+                        result = self.kbd.check_combo_v2(all_opts)
                         if result is True:
                             self._do_correct()
                         elif result is False:
-                            if not self._check_alt_combo(sc):
+                            if not self._check_alt_modifier_only(sc):
                                 self._do_wrong()
                 else:
-                    result = self.kbd.check_combo_v2(detect_opts)
+                    all_opts = self._collect_combo_options(sc)
+                    result = self.kbd.check_combo_v2(all_opts)
                     if result is True:
                         self._do_correct()
                     elif result is False:
-                        if not self._check_alt_combo(sc):
+                        if not self._check_alt_modifier_only(sc):
                             self._do_wrong()
 
             if self.state.current_shortcut:
@@ -1409,6 +1512,44 @@ class GameScreen:
             if rect.collidepoint(mouse):
                 self.hovered_upgrade = uid
 
+        # ── Design v4 animations ──────────────────────────────────────────
+        # Animated score counter (ease-out cubic over 600ms toward available_score)
+        target = self.state.available_score
+        if target != self._last_score_target:
+            self._score_anim_from = self._display_score
+            self._score_anim_to = float(target)
+            self._score_anim_start = now
+            self._last_score_target = target
+        if self._score_anim_to != self._score_anim_from:
+            t = min(1.0, (now - self._score_anim_start) / SCORE_ANIM_DURATION)
+            self._display_score = (self._score_anim_from
+                + (self._score_anim_to - self._score_anim_from) * ease_out_cubic(t))
+            if t >= 1.0:
+                self._score_anim_from = self._score_anim_to
+                self._display_score = self._score_anim_to
+        # Flash decay
+        self._score_flash_t = max(0.0, self._score_flash_t - dt * 2.5)
+        # Combo pop-in on value change
+        if self.state.combo != self._prev_combo_bump:
+            self._combo_bump_t = 1.0
+            self._prev_combo_bump = self.state.combo
+        self._combo_bump_t = max(0.0, self._combo_bump_t - dt * 3.0)
+        # Reveal fade
+        rev_target = 1.0 if (self.state.revealed or self.review_mode) else 0.0
+        self._reveal_fade_t += (rev_target - self._reveal_fade_t) * frame_lerp(0.18, dt)
+        # "Leçon suivante" availability pulse
+        lesson_cost = self.state.next_category_unlock_cost()
+        lesson_avail = lesson_cost is not None and self.state.available_score >= lesson_cost
+        if lesson_avail and not self._lesson_was_available:
+            self._lesson_available_t = 1.0
+        self._lesson_available_t = max(0.0, self._lesson_available_t - dt * 2.0)
+        self._lesson_was_available = lesson_avail
+        # Hover decay for power cards
+        for uid in POWERS:
+            rect = self.upgrade_rects.get(uid)
+            tgt = 1.0 if (rect is not None and rect.collidepoint(mouse)) else 0.0
+            self._power_hover_t[uid] += (tgt - self._power_hover_t[uid]) * frame_lerp(0.18, dt)
+
     def get_shake_offset(self):
         return self.shake_x, self.shake_y
 
@@ -1417,139 +1558,283 @@ class GameScreen:
         surface.fill(BG_COLOR)
         now = time.time()
 
-        if self.review_mode:
-            panel_w = 0
-        else:
-            panel_w = min(280, max(200, w // 5))
-        game_area_w = w - panel_w
-        game_cx = game_area_w // 2
+        # ── Design v4 layout constants (scaled for 1280×720) ──────────────
+        TOP_BAR_H = 72
+        LEFT_W = 330
+        PAD = 20
+        GAP = 14
+        KB_H = 170  # bottom keyboard+numpad strip
 
-        # Vignette
-        draw_vignette(surface, 0.2)
+        # Main area occupies full width (no right sidebar in v4)
+        game_area_w = w
+        game_cx = w // 2
 
-        # Right panel (hidden in review mode)
-        if not self.review_mode:
-            self._draw_panel(surface, w, h, panel_w)
+        # Purple radial halo at top of screen (design v4 signature)
+        draw_radial_halo(surface, w // 2, 0, int(w * 0.55), 240,
+                         ACCENT_PURPLE, alpha=52, falloff=2.2)
 
-        # Back button
-        self.back_rect = draw_button(surface, "< Menu", (12, 12, 100, 36),
-                                     text_size=15, border_color=BORDER_COLOR)
+        # ── TOP BAR ───────────────────────────────────────────────────────
+        top_bar_rect = pygame.Rect(0, 0, w, TOP_BAR_H)
+        pygame.draw.rect(surface, (*BG_CARD, 255), top_bar_rect)
+        pygame.draw.line(surface, BORDER_COLOR, (0, TOP_BAR_H), (w, TOP_BAR_H), 1)
 
-        # Review mode banner
+        # Back button (top-left)
+        self.back_rect = draw_button(surface, "< Menu", (PAD, 16, 110, 40),
+                                     text_size=16, border_color=BORDER_COLOR)
+
+        # Cert badge (gradient violet→pink, inline with back button)
+        cert_label = str(self.cert_name)
+        badge_font = get_font(19, bold=True)
+        bw = badge_font.size(cert_label)[0] + 30
+        bh = 36
+        badge_rect = pygame.Rect(self.back_rect.right + 12, (TOP_BAR_H - bh) // 2, bw, bh)
+        draw_gradient_rect(surface, badge_rect, ACCENT_PURPLE, ACCENT_PINK,
+                           radius=8, direction="horizontal")
+        # Soft halo
+        halo = _get_glow_surface(bw, bh, ACCENT_PURPLE, radius=10, alpha=60)
+        surface.blit(halo, (badge_rect.x - 10, badge_rect.y - 10))
+        draw_gradient_rect(surface, badge_rect, ACCENT_PURPLE, ACCENT_PINK,
+                           radius=8, direction="horizontal")
+        draw_text(surface, cert_label, badge_rect.centerx, badge_rect.centery,
+                  (255, 255, 255), 19, bold=True, anchor="center")
+
+        # Lesson (category) name next to badge
+        sc = self.state.current_shortcut
+        cat_text = (sc or {}).get('category', '') if sc else ''
         if self.review_mode:
             total = len(self._review_playlist)
             current = min(self._review_index, total)
-            banner_text = f"REVISION  {current} / {total}"
-            banner_w = 200
-            banner_h = 28
-            banner_rect = pygame.Rect(game_cx - banner_w // 2, 12, banner_w, banner_h)
-            draw_glow_rect(surface, banner_rect, BG_CARD, ACCENT_PURPLE,
-                           radius=8, glow_radius=6, glow_alpha=35)
-            draw_text(surface, banner_text, game_cx, banner_rect.centery,
-                      ACCENT_PURPLE, 14, bold=True, anchor="center")
+            cat_text = f"RÉVISION  {current} / {total}"
+        draw_text(surface, cat_text or '', badge_rect.right + 14, TOP_BAR_H // 2,
+                  TEXT_SECONDARY if not self.review_mode else ACCENT_PURPLE,
+                  18, bold=self.review_mode, anchor="midleft", max_width=340)
 
-        # Score with glow
-        score_text = f"{self.state.available_score}"
-        if not self.review_mode:
-            draw_text(surface, "SCORE", game_cx, 12, TEXT_DIM, 13, bold=True, anchor="midtop")
-            draw_text_glow(surface, score_text, game_cx, 32, ACCENT_GOLD, size=34,
-                           bold=True, anchor="midtop", glow_alpha=30)
+        # Score + Combo (right side)
+        score_val = int(round(self._display_score))
+        score_str = f"{score_val:,}".replace(",", " ")
+        score_size = 38 + int(6 * self._score_flash_t)
+        score_y = TOP_BAR_H // 2 - 6
+        # Gradient: text primary → violet
+        score_rect = draw_text_gradient(
+            surface, score_str, w - PAD, score_y,
+            [(0.0, TEXT_PRIMARY), (1.0, ACCENT_PURPLE)],
+            size=score_size, bold=True, anchor="midright", mono=True,
+            glow_color=ACCENT_PURPLE,
+            glow_alpha=int(40 + 40 * self._score_flash_t),
+        )
+        # Shared label Y for SCORE and COMBO — stays fixed regardless of
+        # flash-induced size changes on the value rects.
+        label_y = score_y + 18
+        draw_text(surface, "SCORE", w - PAD, label_y,
+                  TEXT_DIM, 13, bold=True, anchor="topright")
 
-        # Level and stats
-        stats_y = 46 if self.review_mode else 68
-        draw_text(surface, f"Niveau {self.state.level}", game_cx, stats_y,
-                  TEXT_SECONDARY, 15, anchor="midtop")
-        stats_text = f"Réussis: {self.state.total_correct}  |  Ratés: {self.state.total_wrong}"
-        draw_text(surface, stats_text, game_cx, stats_y + 18, TEXT_DIM, 13, anchor="midtop")
+        # Combo display (right of center, before score)
+        combo_x = score_rect.x - 18
+        pygame.draw.line(surface, BORDER_COLOR,
+                         (combo_x, 14), (combo_x, TOP_BAR_H - 14), 1)
+        combo_x -= 18
+        combo_val = self.state.combo
+        combo_color = TEXT_DIM
+        for th in sorted(COMBO_COLORS.keys(), reverse=True):
+            if combo_val >= th:
+                combo_color = COMBO_COLORS[th]
+                break
+        combo_text = f"x{combo_val}" if combo_val >= 2 else "—"
+        # popIn: scale 1.1 → 1.0 during bump
+        bump_scale = 1.0 + 0.18 * self._combo_bump_t
+        combo_size = int(36 * bump_scale)
+        if combo_val >= 5:
+            draw_text_glow(surface, combo_text, combo_x, score_y, combo_color,
+                           size=combo_size, bold=True, anchor="midright",
+                           glow_alpha=50)
+        else:
+            draw_text(surface, combo_text, combo_x, score_y, combo_color,
+                      combo_size, bold=True, anchor="midright")
+        draw_text(surface, "COMBO", combo_x, label_y,
+                  TEXT_DIM, 13, bold=True, anchor="topright")
 
-        # Combo
-        draw_combo_text(surface, self.state.combo, game_cx, stats_y + 50)
+        # Timer bar (center of top bar, between lesson name and combo)
+        timer_x0 = max(badge_rect.right + 200, cat_text and
+                       (badge_rect.right + 12 + get_font(15, bold=self.review_mode)
+                        .size(cat_text or '')[0] + 20) or (badge_rect.right + 100))
+        timer_x1 = combo_x - 120
+        if timer_x1 > timer_x0 + 120:
+            timer_w = timer_x1 - timer_x0
+            timer_y = TOP_BAR_H // 2 + 6
+            # Label row
+            draw_text(surface, "TIMER", timer_x0, timer_y - 20,
+                      TEXT_DIM, 13, bold=True, anchor="topleft")
+            # Compute ratio
+            if self.timer_enabled:
+                elapsed = now - self.state.timer_start
+                ratio = max(0.0, 1.0 - elapsed / self.state.timer_duration)
+                remaining_s = max(0.0, self.state.timer_duration - elapsed)
+                time_str = f"{remaining_s:.1f}s" if ratio > 0 else "× TIMEOUT"
+            else:
+                ratio = 1.0
+                time_str = "∞"
+            time_col = ACCENT_RED if ratio < 0.25 else TEXT_DIM
+            draw_text(surface, time_str, timer_x0 + timer_w, timer_y - 20,
+                      time_col, 13, bold=True, anchor="topright")
+            # Bar
+            tb_rect = pygame.Rect(timer_x0, timer_y, timer_w, 6)
+            pygame.draw.rect(surface, BG_PANEL, tb_rect, border_radius=3)
+            if ratio > 0:
+                # Smooth fade: TIMER_LOW → TIMER_MID → TIMER_FULL along ratio.
+                # Stops are positioned so each color has a plateau, with a
+                # soft transition zone in between (no hard jump at 0.25/0.5).
+                fill_col = lerp_color_stops([
+                    (0.0,  TIMER_LOW),
+                    (0.25, TIMER_LOW),
+                    (0.40, TIMER_MID),
+                    (0.55, TIMER_MID),
+                    (0.70, TIMER_FULL),
+                ], ratio)
+                # Pulse when <25%
+                pulse_alpha = 1.0
+                if ratio < 0.25 and not self.state.is_frozen():
+                    pulse_alpha = 0.45 + 0.55 * abs(math.sin(now * 6))
+                fw = max(1, int(timer_w * ratio))
+                fill_surf = pygame.Surface((fw, 6), pygame.SRCALPHA)
+                pygame.draw.rect(fill_surf, (*fill_col, int(255 * pulse_alpha)),
+                                 (0, 0, fw, 6), border_radius=3)
+                surface.blit(fill_surf, tb_rect.topleft)
+                # Edge glow
+                if fw > 10:
+                    gs = pygame.Surface((16, 16), pygame.SRCALPHA)
+                    pygame.draw.circle(gs, (*fill_col, 180), (8, 8), 6)
+                    surface.blit(gs, (timer_x0 + fw - 8, timer_y - 5),
+                                 special_flags=pygame.BLEND_RGBA_ADD)
+                # Border glow when critical (screen edges pulse red)
+                if ratio < 0.25 and not self.state.is_frozen() and not self.game_over:
+                    draw_border_glow(surface, ACCENT_RED,
+                                     pulse_alpha * 0.5)
 
-        # Active effects
-        if not self.review_mode:
-            effects_y = 148
-            if self.state.is_frozen():
-                remaining = self.state.freeze_until - now
-                draw_text_glow(surface, f"FREEZE {remaining:.1f}s", game_cx, effects_y,
-                               ACCENT_BLUE, size=18, bold=True, anchor="midtop", glow_alpha=50)
-                effects_y += 24
-            if self.state.is_double():
-                remaining = self.state.double_until - now
-                draw_text_glow(surface, f"x2 POINTS {remaining:.1f}s", game_cx, effects_y,
-                               ACCENT_PURPLE, size=18, bold=True, anchor="midtop", glow_alpha=50)
+        # Active effects (below top bar, left side)
+        effects_y = TOP_BAR_H + 8
+        if self.state.is_frozen():
+            remaining = self.state.freeze_until - now
+            draw_text_glow(surface, f"❄ FREEZE {remaining:.1f}s",
+                           PAD, effects_y, ACCENT_CYAN, size=17, bold=True,
+                           anchor="topleft", glow_alpha=50)
+        if self.state.is_double():
+            remaining = self.state.double_until - now
+            draw_text_glow(surface, f"×2 {remaining:.1f}s",
+                           PAD + 200, effects_y, ACCENT_GOLD, size=17, bold=True,
+                           anchor="topleft", glow_alpha=50)
 
-        # Current shortcut
+        # ── MAIN 2-COLUMN AREA ────────────────────────────────────────────
         sc = self.state.current_shortcut
+        MAIN_TOP = TOP_BAR_H + 40       # leave space for effects row
+        MAIN_BOT = h - KB_H - 12        # keyboard strip sits below
+        main_h = MAIN_BOT - MAIN_TOP
+        left_x = PAD
+        right_x = left_x + LEFT_W + GAP * 2
+        right_w = w - right_x - PAD
+
         if sc:
-            cat = sc.get('category', '')
-            draw_text(surface, cat.upper(), game_cx, 180, TEXT_DIM, 13,
-                      bold=True, anchor="midtop")
+            # ── LEFT COLUMN — Question card ──────────────────────────────
+            qcard = pygame.Rect(left_x, MAIN_TOP, LEFT_W, main_h - 90)
+            draw_shadow_rect(surface, qcard, BG_CARD, radius=14, border=1,
+                             border_color=BORDER_COLOR, shadow_offset=3, shadow_alpha=40)
+            # Left gradient bar
+            bar_rect = pygame.Rect(qcard.x, qcard.y + 12, 3, qcard.h - 24)
+            draw_gradient_rect(surface, bar_rect, ACCENT_PURPLE, ACCENT_PINK,
+                               radius=2, direction="vertical")
+
+            qx = qcard.x + 22
+            qy = qcard.y + 20
+            draw_text(surface, "RACCOURCI CLAVIER", qx, qy, TEXT_DIM, 14,
+                      bold=True, anchor="topleft")
+            qy += 26
+
+            # Command name — wrap on up to 2 lines (no ellipsis truncation)
+            cmd_name = sc.get('command_name', '???')
+            cmd_size = 36 if len(cmd_name) <= 22 else (30 if len(cmd_name) <= 32 else 26)
+            name_font = get_font(cmd_size, bold=True)
+            text_max = qcard.w - 40
+            # Word-wrap the command name
+            cmd_words = cmd_name.split()
+            cmd_lines, cur = [], ""
+            for word in cmd_words:
+                test = (cur + " " + word).strip()
+                if name_font.size(test)[0] > text_max and cur:
+                    cmd_lines.append(cur)
+                    cur = word
+                else:
+                    cur = test
+            if cur:
+                cmd_lines.append(cur)
+            # Cap at 2 lines — if more, shrink further and retry once
+            if len(cmd_lines) > 2 and cmd_size > 22:
+                cmd_size = 22
+                name_font = get_font(cmd_size, bold=True)
+                cmd_lines, cur = [], ""
+                for word in cmd_words:
+                    test = (cur + " " + word).strip()
+                    if name_font.size(test)[0] > text_max and cur:
+                        cmd_lines.append(cur); cur = word
+                    else:
+                        cur = test
+                if cur:
+                    cmd_lines.append(cur)
+            line_h = cmd_size + 4
+            for ln in cmd_lines[:2]:
+                draw_text(surface, ln, qx, qy, TEXT_PRIMARY, cmd_size,
+                          bold=True, anchor="topleft", shadow=True)
+                qy += line_h
+            qy += 12
+
+            # Context
+            context = sc.get('context') or ''
+            if context:
+                # Wrap into up to 3 lines
+                ctx_font = get_font(17, False)
+                words = context.split()
+                lines, cur = [], ""
+                text_max = qcard.w - 44
+                for word in words:
+                    test = (cur + " " + word).strip()
+                    if ctx_font.size(test)[0] > text_max and cur:
+                        lines.append(cur)
+                        cur = word
+                    else:
+                        cur = test
+                if cur:
+                    lines.append(cur)
+                for ln in lines[:3]:
+                    draw_text(surface, ln, qx, qy, TEXT_SECONDARY, 17,
+                              anchor="topleft")
+                    qy += 22
+                qy += 8
 
             # Difficulty dots
             diff = sc.get('difficulty', 1)
-            diff_colors = {1: ACCENT_GREEN, 2: ACCENT_ORANGE, 3: ACCENT_RED}
+            diff_colors = {1: ACCENT_CYAN, 2: ACCENT_ORANGE, 3: ACCENT_RED}
             dot_color = diff_colors.get(diff, TEXT_PRIMARY)
-            dot_y = 200
-            dot_r = 5
-            dot_gap = 14
-            total_dot_w = 3 * dot_r * 2 + 2 * dot_gap
-            dot_x = game_cx - total_dot_w // 2 + dot_r
+            draw_text(surface, "DIFFICULTÉ", qx, qy, TEXT_DIM, 13,
+                      bold=True, anchor="topleft")
+            qy += 22
+            dr = 5
+            dx = qx + dr
             for i in range(3):
                 if i < diff:
-                    pygame.draw.circle(surface, dot_color, (dot_x, dot_y), dot_r)
-                    # Glow on filled dots
-                    glow_s = pygame.Surface((dot_r * 6, dot_r * 6), pygame.SRCALPHA)
-                    pygame.draw.circle(glow_s, (*dot_color, 40),
-                                       (dot_r * 3, dot_r * 3), dot_r * 3)
-                    surface.blit(glow_s, (dot_x - dot_r * 3, dot_y - dot_r * 3))
+                    # Soft halo: concentric rings, alpha fades with distance
+                    gr = dr * 3
+                    glow_s = pygame.Surface((gr * 2, gr * 2), pygame.SRCALPHA)
+                    steps = 8
+                    for k in range(steps):
+                        t = k / steps  # 0 at center, ~1 at edge
+                        radius = int(dr + (gr - dr) * t)
+                        a = int(70 * (1.0 - t) ** 2)
+                        if a <= 0: continue
+                        pygame.draw.circle(glow_s, (*dot_color, a),
+                                           (gr, gr), radius)
+                    surface.blit(glow_s, (dx - gr, qy + dr - gr))
+                    pygame.draw.circle(surface, dot_color, (dx, qy + dr), dr)
                 else:
-                    pygame.draw.circle(surface, BORDER_COLOR, (dot_x, dot_y), dot_r, 1)
-                dot_x += dot_r * 2 + dot_gap
-
-            # Command name — big, with shadow
-            cmd_name = sc.get('command_name', '???')
-            cmd_size = min(48, max(30, 48 - len(cmd_name) // 3))
-            draw_text(surface, cmd_name, game_cx, 225, TEXT_PRIMARY, cmd_size,
-                      bold=True, anchor="midtop", max_width=game_area_w - 60, shadow=True)
-
-            # Context banner
-            context = sc.get('context')
-            context_y = 290
-            if context:
-                ctx_text = f"[i] {context}"
-                ctx_font = get_font(14, False)
-                banner_w = min(game_area_w - 80, 700)
-                text_max = banner_w - 24
-                # Check if text fits on one line
-                rendered = ctx_font.render(ctx_text, True, ACCENT_ORANGE)
-                if rendered.get_width() <= text_max:
-                    banner_h = 34
-                    banner_x = game_cx - banner_w // 2
-                    draw_shadow_rect(surface, (banner_x, context_y, banner_w, banner_h),
-                                     BG_CONTEXT, radius=8, shadow_offset=2, shadow_alpha=40)
-                    draw_text(surface, ctx_text, game_cx, context_y + banner_h // 2,
-                              ACCENT_ORANGE, 14, anchor="center")
-                else:
-                    # Word-wrap into two lines
-                    words = ctx_text.split()
-                    line1 = ""
-                    for i, w in enumerate(words):
-                        test = (line1 + " " + w).strip()
-                        if ctx_font.render(test, True, ACCENT_ORANGE).get_width() > text_max:
-                            break
-                        line1 = test
-                    else:
-                        i = len(words)
-                    line2 = " ".join(words[i:])
-                    banner_h = 50
-                    banner_x = game_cx - banner_w // 2
-                    draw_shadow_rect(surface, (banner_x, context_y, banner_w, banner_h),
-                                     BG_CONTEXT, radius=8, shadow_offset=2, shadow_alpha=40)
-                    draw_text(surface, line1, game_cx, context_y + banner_h // 2 - 9,
-                              ACCENT_ORANGE, 14, anchor="center")
-                    draw_text(surface, line2, game_cx, context_y + banner_h // 2 + 9,
-                              ACCENT_ORANGE, 14, anchor="center", max_width=text_max)
-                context_y += banner_h + 12
+                    pygame.draw.circle(surface, BORDER_COLOR, (dx, qy + dr), dr, 1)
+                dx += dr * 2 + 12
 
             # Input type hint
             input_type = sc.get('input_type', 'key_combo')
@@ -1557,118 +1842,278 @@ class GameScreen:
                 steps = sc.get('keys_win', [])
                 n_steps = len(steps) if isinstance(steps, list) and steps and isinstance(steps[0], list) else 0
                 hint_text = f"Sequence ({self._seq_step}/{n_steps})"
-                draw_text(surface, hint_text, game_cx, context_y + 4,
-                          ACCENT_BLUE, 13, anchor="midtop")
-                context_y += 20
+                hint_col = ACCENT_PURPLE
             elif input_type == 'modifier_click':
-                sc = self.state.current_shortcut
-                is_dbl = sc and sc.get('_detect_click') == 'double'
-                hint_text = "Maintenez les touches + Double-clic" if is_dbl \
-                    else "Maintenez les touches + Clic souris"
-                draw_text(surface, hint_text, game_cx, context_y + 4,
-                          ACCENT_BLUE, 13, anchor="midtop")
-                context_y += 20
+                # Also duplicated in the "APPUYEZ SUR" card (right side) so
+                # the click type is visible near both the description and
+                # the keycap area.
+                is_dbl = sc.get('_detect_click') == 'double'
+                hint_text = "+ Double-clic" if is_dbl else "+ Clic souris"
+                hint_col = ACCENT_PINK
             elif input_type == 'single_key':
                 hint_text = "Touche seule"
-                draw_text(surface, hint_text, game_cx, context_y + 4,
-                          TEXT_DIM, 13, anchor="midtop")
-                context_y += 20
-
-            # Timer bar
-            timer_y = context_y + 15
-            if self.timer_enabled:
-                elapsed = now - self.state.timer_start
-                ratio = max(0.0, 1.0 - elapsed / self.state.timer_duration)
-                bar_w = min(420, game_area_w - 100)
-                draw_timer_bar(surface, game_cx - bar_w // 2, timer_y, bar_w, 16, ratio,
-                               frozen=self.state.is_frozen())
-                # Border glow when timer critical
-                if ratio < 0.25 and not self.state.is_frozen() and not self.game_over:
-                    pulse = abs(math.sin(now * 6))
-                    draw_border_glow(surface, ACCENT_RED, pulse * 0.6)
+                hint_col = TEXT_DIM
             else:
-                ratio = 1.0  # for reveal_y positioning below
+                hint_text = ""
+                hint_col = TEXT_DIM
+            if hint_text:
+                hy = qcard.bottom - 32
+                draw_text(surface, hint_text, qx, hy, hint_col, 16,
+                          bold=True, anchor="topleft")
 
-            # Revealed answer (always visible in review mode)
-            if self.review_mode or self.state.revealed:
-                keys_mac = sc.get('keys_mac', sc.get('keys', []))
-                keys_win = sc.get('keys_win', sc.get('keys', []))
-                input_type = sc.get('input_type', 'key_combo')
-
-                reveal_y = timer_y + 35
-
-                keys_small = sc.get(_KEYS_SMALL, sc.get('keys', []))
-                keys_big   = sc.get(_KEYS_BIG,   sc.get('keys', []))
-
-                if input_type == 'key_sequence':
-                    # Small (secondary) sequence
-                    draw_text(surface, f"{_LABEL_SMALL} :", game_cx, reveal_y,
-                              TEXT_DIM, 12, bold=True, anchor="midtop")
-                    draw_key_sequence(surface, keys_small, game_cx, reveal_y + 34,
-                                      size=26, current_step=len(keys_small), show_all=True)
-
-                    # Big (primary) sequence
-                    reveal_y += 64
-                    draw_text(surface, f"{_LABEL_BIG} :", game_cx, reveal_y,
-                              _COLOR_BIG, 15, bold=True, anchor="midtop")
-                    draw_key_sequence(surface, keys_big, game_cx, reveal_y + 44,
-                                      size=36, current_step=len(keys_big), show_all=True)
-                    reveal_y += 68
-                    draw_text(surface, "(Sequence de touches)", game_cx, reveal_y,
-                              TEXT_DIM, 13, anchor="midtop")
+            # ── LEFT COLUMN — Unlock Lesson button ──────────────────────
+            unlock_y = qcard.bottom + 12
+            unlock_rect = pygame.Rect(left_x, unlock_y, LEFT_W, 76)
+            self.cat_unlock_rect = unlock_rect
+            next_cost = self.state.next_category_unlock_cost()
+            if next_cost is not None:
+                next_cat = self.state.next_category_name() or "?"
+                can_unlock = self.state.available_score >= next_cost
+                prog = self.state.next_category_unlock_progress()
+                if can_unlock:
+                    # Available — gold outer halo (softly pulses) + dark card
+                    pulse = 0.5 + 0.5 * math.sin(now * 3.5)
+                    ga = int(35 + 35 * pulse * (0.3 + 0.7 * self._lesson_available_t))
+                    draw_glow_rect(surface, unlock_rect, BG_CARD, ACCENT_GOLD,
+                                   radius=12, glow_radius=14, glow_alpha=ga)
+                    pygame.draw.rect(surface, ACCENT_GOLD, unlock_rect,
+                                     width=2, border_radius=12)
+                    draw_text(surface, "DÉBLOQUER LEÇON", unlock_rect.x + 16,
+                              unlock_rect.y + 10, ACCENT_GOLD, 14, bold=True,
+                              anchor="topleft")
+                    draw_text(surface, next_cat, unlock_rect.x + 16,
+                              unlock_rect.y + 32, TEXT_PRIMARY, 20, bold=True,
+                              anchor="topleft", max_width=unlock_rect.w - 120)
+                    draw_text(surface, f"-{next_cost} pts", unlock_rect.right - 16,
+                              unlock_rect.y + 34, ACCENT_GOLD, 19, bold=True,
+                              anchor="topright")
                 else:
-                    # Small (secondary) shortcut
-                    draw_text(surface, f"{_LABEL_SMALL} :", game_cx, reveal_y,
-                              TEXT_DIM, 12, bold=True, anchor="midtop")
-                    draw_key_combo(surface, keys_small, game_cx, reveal_y + 34, size=26)
+                    # Locked — padlock + progress bar
+                    draw_rounded_rect(surface, unlock_rect, BG_CARD_LOCKED,
+                                      radius=12, border=1, border_color=BORDER_COLOR)
+                    draw_padlock(surface, unlock_rect.x + 22, unlock_rect.y + 22,
+                                 14, TEXT_DIM)
+                    draw_text(surface, "PROCHAINE LEÇON", unlock_rect.x + 48,
+                              unlock_rect.y + 10, TEXT_DIM, 13, bold=True,
+                              anchor="topleft")
+                    draw_text(surface, next_cat, unlock_rect.x + 48,
+                              unlock_rect.y + 28, TEXT_SECONDARY, 17, bold=True,
+                              anchor="topleft", max_width=unlock_rect.w - 140)
+                    draw_text(surface, f"{next_cost} pts",
+                              unlock_rect.right - 14, unlock_rect.y + 30,
+                              TEXT_DIM, 15, bold=True, anchor="topright")
+                    # Progress bar
+                    pb_rect = pygame.Rect(unlock_rect.x + 14, unlock_rect.bottom - 18,
+                                          unlock_rect.w - 28, 6)
+                    draw_progress_bar(surface, pb_rect, prog,
+                                      [(0.0, ACCENT_PURPLE), (1.0, ACCENT_PINK)],
+                                      bg_color=BG_PANEL, radius=3)
+            else:
+                self.cat_unlock_rect = None
+                # All lessons unlocked — decorative marker
+                draw_rounded_rect(surface, unlock_rect, BG_CARD,
+                                  radius=12, border=1, border_color=ACCENT_CYAN)
+                draw_text(surface, "TOUTES LES LEÇONS DÉBLOQUÉES",
+                          unlock_rect.centerx, unlock_rect.centery,
+                          ACCENT_CYAN, 16, bold=True, anchor="center")
 
-                    # Big (primary) shortcut
-                    reveal_y += 64
-                    draw_text(surface, f"{_LABEL_BIG} :", game_cx, reveal_y,
-                              _COLOR_BIG, 15, bold=True, anchor="midtop")
-                    draw_key_combo(surface, keys_big, game_cx, reveal_y + 44)
+            # ── RIGHT COLUMN — "APPUYEZ SUR" card ────────────────────────
+            pcard_h = main_h - 140   # leaves space for powers row
+            pcard = pygame.Rect(right_x, MAIN_TOP, right_w, pcard_h)
+            draw_shadow_rect(surface, pcard, BG_CARD, radius=14, border=1,
+                             border_color=BORDER_COLOR, shadow_offset=3, shadow_alpha=40)
+            # Corner L-marks
+            draw_corner_frame(surface, pcard, ACCENT_PURPLE, length=18,
+                              thickness=2, alpha=160)
 
-                    # Input type indicator
-                    if input_type == 'modifier_click':
-                        reveal_y += 68
-                        is_dbl = sc and sc.get('_detect_click') == 'double'
-                        _click_label = "(Modificateurs + Double-clic)" if is_dbl \
-                            else "(Modificateurs + Clic souris)"
-                        draw_text(surface, _click_label, game_cx, reveal_y,
-                                  TEXT_DIM, 13, anchor="midtop")
-                    elif input_type == 'single_key':
-                        reveal_y += 68
-                        draw_text(surface, "(Touche seule)", game_cx, reveal_y,
-                                  TEXT_DIM, 13, anchor="midtop")
+            label_y = pcard.y + 20
+            draw_text(surface, "APPUYEZ SUR", pcard.centerx, label_y,
+                      TEXT_DIM, 16, bold=True, anchor="midtop")
 
-                # Display alternative shortcuts
-                for alt in sc.get('alt', []):
-                    reveal_y += 24
-                    draw_text(surface, "ou", game_cx, reveal_y,
-                              TEXT_DIM, 12, anchor="midtop")
-                    reveal_y += 18
-                    alt_small = alt.get(_KEYS_SMALL, alt.get('keys_win', []))
-                    alt_big   = alt.get(_KEYS_BIG,   alt.get('keys_win', []))
-                    draw_key_combo(surface, alt_small, game_cx - 100, reveal_y + 14, size=20)
-                    draw_key_combo(surface, alt_big, game_cx + 100, reveal_y + 14, size=24)
-                    reveal_y += 28
+            # Keycaps: show `?` if hidden, or real keys if revealed/review
+            keys_y = pcard.y + pcard.h // 2 + 6
+            show_answer = self.review_mode or self.state.revealed
+            keys_small = sc.get(_KEYS_SMALL, sc.get('keys', []))
+            keys_big   = sc.get(_KEYS_BIG,   sc.get('keys', []))
+            if not IS_MAC:
+                if input_type == 'key_sequence':
+                    keys_big = _to_azerty_display_seq(keys_big)
+                else:
+                    keys_big = _to_azerty_display(keys_big)
+            fade = self._reveal_fade_t
 
-            # Visual keyboard (always visible)
-            kb_margin = 40
-            kb_w = game_area_w - kb_margin * 2
-            kb_row_h = 23  # key_h(20) + gap(3)
-            kb_total_h = len(_KB_ROWS) * kb_row_h - 3  # 5 rows
-            kb_bottom = (h - 56) if not self.review_mode else (h - 22)
-            kb_y = kb_bottom - kb_total_h
-            kb_x = kb_margin
+            if show_answer and fade > 0.02:
+                cy = pcard.y + pcard.h // 2
+                # Secondary (small) reference
+                draw_text(surface, _LABEL_SMALL, pcard.centerx,
+                          cy - 96, TEXT_DIM, 14,
+                          bold=True, anchor="midtop")
+                if input_type == 'key_sequence':
+                    draw_key_sequence(surface, keys_small, pcard.centerx,
+                                      cy - 52, size=28,
+                                      current_step=len(keys_small), show_all=True)
+                else:
+                    draw_key_combo(surface, keys_small, pcard.centerx,
+                                   cy - 52, size=28)
+                # Primary (big) — player keyboard
+                draw_text(surface, _LABEL_BIG, pcard.centerx,
+                          cy + 2, _COLOR_BIG, 16,
+                          bold=True, anchor="midtop")
+                if input_type == 'key_sequence':
+                    draw_key_sequence(surface, keys_big, pcard.centerx,
+                                      cy + 66, size=40,
+                                      current_step=len(keys_big), show_all=True)
+                else:
+                    draw_key_combo(surface, keys_big, pcard.centerx,
+                                   cy + 66, size=40)
+                # Alt shortcuts
+                if sc.get('alt'):
+                    ay = cy + 120
+                    for alt in sc.get('alt', [])[:2]:
+                        draw_text(surface, "ou", pcard.centerx, ay,
+                                  TEXT_DIM, 14, anchor="midtop")
+                        ay += 22
+                        alt_big = alt.get(_KEYS_BIG, alt.get('keys_win', []))
+                        if not IS_MAC:
+                            if alt.get('input_type') == 'key_sequence':
+                                alt_big = _to_azerty_display_seq(alt_big)
+                            else:
+                                alt_big = _to_azerty_display(alt_big)
+                        draw_key_combo(surface, alt_big, pcard.centerx,
+                                       ay + 12, size=24)
+                        ay += 38
+            else:
+                # `?` placeholder keycaps
+                qr_size = 78
+                qgap = 20
+                qrects_w = 3 * qr_size + 2 * qgap
+                qx0 = pcard.centerx - qrects_w // 2
+                for i in range(3):
+                    r = pygame.Rect(qx0 + i * (qr_size + qgap),
+                                    keys_y - qr_size // 2, qr_size, qr_size)
+                    pygame.draw.rect(surface, BG_CARD_2, r, border_radius=10)
+                    pygame.draw.rect(surface, BORDER_COLOR, r, width=1,
+                                     border_radius=10)
+                    draw_text(surface, "?", r.centerx, r.centery,
+                              TEXT_DIM, 46, bold=True, anchor="center")
+                # Footer hint — for modifier_click shortcuts, show the click
+                # type badge in place of the generic "Appuyez sur les touches…"
+                if input_type == 'modifier_click':
+                    is_dbl = sc.get('_detect_click') == 'double'
+                    click_txt = "+ Double-clic" if is_dbl else "+ Clic souris"
+                    draw_text(surface, click_txt, pcard.centerx,
+                              pcard.bottom - 30, ACCENT_PINK, 16,
+                              bold=True, anchor="midtop")
+                else:
+                    draw_text(surface, "Appuyez sur les touches…", pcard.centerx,
+                              pcard.bottom - 30, TEXT_DIM, 16, anchor="midtop")
 
+            # In review/reveal mode, the click-type badge also sits under the
+            # revealed keycaps so the player sees what input is expected.
+            if show_answer and fade > 0.02 and input_type == 'modifier_click':
+                is_dbl = sc.get('_detect_click') == 'double'
+                click_txt = "+ Double-clic" if is_dbl else "+ Clic souris"
+                draw_text(surface, click_txt, pcard.centerx,
+                          pcard.bottom - 30, ACCENT_PINK, 16,
+                          bold=True, anchor="midtop")
+
+            # ── RIGHT COLUMN — POWERS row (4 cards) ──────────────────────
+            self.upgrade_rects = {}
+            powers_sorted = sorted(POWERS.items(), key=lambda kv: kv[1]['order'])
+            n = len(powers_sorted)
+            pwr_gap = 10
+            pwr_h = main_h - pcard_h - 16
+            pwr_w = (right_w - (n - 1) * pwr_gap) / n
+            mouse = pygame.mouse.get_pos()
+            for i, (pid, pdata) in enumerate(powers_sorted):
+                px = right_x + int(i * (pwr_w + pwr_gap))
+                pwr_rect = pygame.Rect(px, pcard.bottom + 16, int(pwr_w), pwr_h)
+                self.upgrade_rects[pid] = pwr_rect
+
+                unlocked = self.state.is_power_unlocked(pid)
+                can_use = self.state.can_use_power(pid)
+                hover_t = self._power_hover_t.get(pid, 0.0)
+                pcol = pdata['color']
+
+                # Base background
+                if unlocked and can_use:
+                    base_bg = _lc(BG_CARD, pcol, 0.10 + 0.20 * hover_t)
+                    border = _lc(BORDER_COLOR, pcol, 0.4 + 0.6 * hover_t)
+                elif unlocked:
+                    base_bg = BG_CARD_LOCKED
+                    border = BORDER_COLOR
+                else:
+                    base_bg = BG_CARD_LOCKED
+                    border = BORDER_COLOR
+                draw_rounded_rect(surface, pwr_rect, base_bg, radius=10,
+                                  border=1, border_color=border)
+
+                # Icon circle
+                icon_r = 22
+                icon_cx = pwr_rect.centerx
+                icon_cy = pwr_rect.y + 28
+                if unlocked:
+                    pygame.draw.circle(surface, _lc(BG_CARD_2, pcol, 0.3),
+                                       (icon_cx, icon_cy), icon_r)
+                    pygame.draw.circle(surface, pcol, (icon_cx, icon_cy),
+                                       icon_r, 2)
+                    draw_text(surface, pdata['icon'], icon_cx, icon_cy,
+                              pcol if can_use else TEXT_DIM, 17, bold=True,
+                              anchor="center")
+                else:
+                    pygame.draw.circle(surface, BG_CARD_2, (icon_cx, icon_cy),
+                                       icon_r)
+                    pygame.draw.circle(surface, BORDER_COLOR,
+                                       (icon_cx, icon_cy), icon_r, 1)
+                    draw_padlock(surface, icon_cx, icon_cy, 16, TEXT_DIM)
+
+                # Name
+                name_col = TEXT_PRIMARY if can_use else TEXT_DIM
+                draw_text(surface, pdata['name'], pwr_rect.centerx,
+                          pwr_rect.y + 56, name_col, 16, bold=True,
+                          anchor="midtop")
+
+                # Cost badge or unlock progress
+                if unlocked:
+                    cost_col = ACCENT_GOLD if can_use else TEXT_DIM
+                    draw_text(surface, f"-{pdata['use_cost']}",
+                              pwr_rect.centerx, pwr_rect.bottom - 18,
+                              cost_col, 15, bold=True, anchor="midbottom")
+                else:
+                    prog = self.state.power_unlock_progress(pid)
+                    pb = pygame.Rect(pwr_rect.x + 10, pwr_rect.bottom - 12,
+                                     pwr_rect.w - 20, 5)
+                    draw_progress_bar(surface, pb, prog,
+                                      [(0.0, ACCENT_PURPLE), (1.0, ACCENT_PINK)],
+                                      bg_color=BG_PANEL, radius=2)
+                    draw_text(surface, f"{pdata['unlock_cost']}",
+                              pwr_rect.centerx, pwr_rect.bottom - 32,
+                              TEXT_DIM, 13, bold=True, anchor="midbottom")
+
+            # Clear legacy action rects (no longer used for v4 click routing)
+            self.action_rects = {}
+
+            # ── BOTTOM STRIP — Keyboard + Numpad ─────────────────────────
             pressed_keys = self.kbd.get_current_keys()
             expected_keys = self._get_expected_keys() if self.review_mode else frozenset()
-            self._draw_keyboard(surface, kb_x, kb_y, kb_w, pressed_keys, expected_keys)
-
-        # Action buttons (hidden in review mode)
-        if not self.review_mode:
-            self._draw_action_buttons(surface, game_cx, h)
+            strip_y = h - KB_H + 6
+            strip_h = KB_H - 16
+            # Allocate: numpad 160 wide on right, separator 20, keyboard fills rest
+            nump_w = 160
+            sep_w = 20
+            kb_w = w - PAD * 2 - sep_w - nump_w
+            kb_x = PAD
+            self._draw_keyboard(surface, kb_x, strip_y, kb_w, strip_h,
+                                pressed_keys, expected_keys)
+            # Separator
+            sep_x = kb_x + kb_w + sep_w // 2
+            pygame.draw.line(surface, BORDER_COLOR,
+                             (sep_x, strip_y + 8),
+                             (sep_x, strip_y + strip_h - 8), 1)
+            # Numpad
+            nump_x = kb_x + kb_w + sep_w
+            self._draw_numpad(surface, nump_x, strip_y, nump_w, strip_h,
+                              pressed_keys, expected_keys)
 
         # Achievement notifications
         self._draw_achievements(surface, game_area_w)
@@ -1699,9 +2144,10 @@ class GameScreen:
         if age < 0.15:
             return  # Brief delay before showing box
 
-        # Box slides in from top
+        # Box slides in from top — height grows with number of alt shortcuts
         box_w = min(520, w - 80)
-        box_h = 480
+        n_alts = len(self.game_over_answer.get('alt', [])) if self.game_over_answer else 0
+        box_h = 440 + min(2, n_alts) * 46
         box_x = game_cx - box_w // 2
         target_y = (h - box_h) // 2
         slide_t = min(1.0, (age - 0.15) / 0.3)
@@ -1730,6 +2176,12 @@ class GameScreen:
                            self.game_over_answer.get('keys', []))
             go_big   = self.game_over_answer.get(_KEYS_BIG,
                            self.game_over_answer.get('keys', []))
+            go_input_type_early = self.game_over_answer.get('input_type', 'key_combo')
+            if not IS_MAC:
+                if go_input_type_early == 'key_sequence':
+                    go_big = _to_azerty_display_seq(go_big)
+                else:
+                    go_big = _to_azerty_display(go_big)
             draw_text(surface, "La reponse etait :", cx, y, TEXT_SECONDARY, 15,
                       anchor="midtop")
             y += 26
@@ -1754,15 +2206,21 @@ class GameScreen:
                 draw_key_combo(surface, go_big, cx, y + 22, size=30)
             y += 52
 
-            # Display alternative shortcuts in game over
-            for alt in self.game_over_answer.get('alt', []):
+            # Display alternative shortcuts — compact: just the player's
+            # keyboard notation (big). The dual reference/player display is
+            # already shown for the main shortcut above, so alts don't need
+            # to be duplicated.
+            for alt in self.game_over_answer.get('alt', [])[:2]:
                 draw_text(surface, "ou", cx, y, TEXT_DIM, 11, anchor="midtop")
-                y += 16
-                alt_small = alt.get(_KEYS_SMALL, alt.get('keys_win', []))
-                alt_big   = alt.get(_KEYS_BIG,   alt.get('keys_win', []))
-                draw_key_combo(surface, alt_small, cx - 80, y + 10, size=18)
-                draw_key_combo(surface, alt_big, cx + 80, y + 10, size=22)
-                y += 30
+                y += 14
+                alt_big = alt.get(_KEYS_BIG, alt.get('keys_win', []))
+                if not IS_MAC:
+                    if alt.get('input_type') == 'key_sequence':
+                        alt_big = _to_azerty_display_seq(alt_big)
+                    else:
+                        alt_big = _to_azerty_display(alt_big)
+                draw_key_combo(surface, alt_big, cx, y + 10, size=22)
+                y += 32
 
         # Separator
         y += 8
@@ -1787,31 +2245,40 @@ class GameScreen:
 
         mouse = pygame.mouse.get_pos()
 
-        # Restart
+        # Smooth hover fade (ALP-style) — compute local dt from last call
+        dt = max(0.0, min(0.1, now - self._go_last_draw)) if self._go_last_draw else 0.016
+        self._go_last_draw = now
+
+        # Restart — stays cyan/green (primary, positive action)
         restart_rect = pygame.Rect(bx, by, btn_w, btn_h)
         self.game_over_restart_rect = restart_rect
-        hover_r = restart_rect.collidepoint(mouse)
-        if hover_r:
-            draw_glow_rect(surface, restart_rect, ACCENT_GREEN, ACCENT_GREEN,
-                           radius=10, glow_radius=10, glow_alpha=60)
-        else:
-            draw_shadow_rect(surface, restart_rect, BG_CARD, radius=10, border=2,
-                             border_color=ACCENT_GREEN)
+        r_col = ACCENT_GREEN
+        self._go_restart_hover_t += (
+            (1.0 if restart_rect.collidepoint(mouse) else 0.0)
+            - self._go_restart_hover_t
+        ) * _lf(0.14, dt)
+        rht = self._go_restart_hover_t
+        draw_glow_rect(surface, restart_rect, _lc(BG_CARD, r_col, rht),
+                       r_col, radius=10, glow_radius=10, glow_alpha=int(rht * 60))
+        pygame.draw.rect(surface, r_col, restart_rect, width=2, border_radius=10)
         draw_text(surface, "Recommencer", restart_rect.centerx, restart_rect.centery,
-                  BG_COLOR if hover_r else ACCENT_GREEN, 20, bold=True, anchor="center")
+                  _lc(r_col, BG_COLOR, rht), 20, bold=True, anchor="center")
 
-        # Menu
+        # Menu — violet (ACCENT_PURPLE) for clear contrast against the cyan
+        # Restart button (was ACCENT_BLUE — too close to cyan visually).
         menu_rect = pygame.Rect(bx + btn_w + gap, by, btn_w, btn_h)
         self.game_over_menu_rect = menu_rect
-        hover_m = menu_rect.collidepoint(mouse)
-        if hover_m:
-            draw_glow_rect(surface, menu_rect, ACCENT_BLUE, ACCENT_BLUE,
-                           radius=10, glow_radius=10, glow_alpha=60)
-        else:
-            draw_shadow_rect(surface, menu_rect, BG_CARD, radius=10, border=2,
-                             border_color=ACCENT_BLUE)
+        m_col = ACCENT_PURPLE
+        self._go_menu_hover_t += (
+            (1.0 if menu_rect.collidepoint(mouse) else 0.0)
+            - self._go_menu_hover_t
+        ) * _lf(0.14, dt)
+        mht = self._go_menu_hover_t
+        draw_glow_rect(surface, menu_rect, _lc(BG_CARD, m_col, mht),
+                       m_col, radius=10, glow_radius=10, glow_alpha=int(mht * 60))
+        pygame.draw.rect(surface, m_col, menu_rect, width=2, border_radius=10)
         draw_text(surface, "Menu", menu_rect.centerx, menu_rect.centery,
-                  BG_COLOR if hover_m else ACCENT_BLUE, 20, bold=True, anchor="center")
+                  _lc(m_col, BG_COLOR, mht), 20, bold=True, anchor="center")
 
     def _draw_achievements(self, surface, game_area_w):
         """Draw the achievement notification banner (top-right of game area)."""
@@ -1894,21 +2361,20 @@ class GameScreen:
         opts = sc.get('_detect_key_options', [])
         return opts[0] if opts else frozenset()
 
-    def _draw_keyboard(self, surface, kb_x, kb_y, kb_w, highlight_keys, expected_keys):
+    def _draw_keyboard(self, surface, kb_x, kb_y, kb_w, kb_h, highlight_keys, expected_keys):
         """Draw the visual QWERTY Mac keyboard.
 
-        highlight_keys: set of internal names currently pressed (player input) → blue
-        expected_keys:  set of internal names for the correct shortcut → green (review only)
-        Both pressed and expected → purple.
+        highlight_keys: set of internal names currently pressed (player input) → violet
+        expected_keys:  set of internal names for the correct shortcut → cyan (review only)
+        Both pressed and expected → pink.
         """
-        gap = 3
-        key_h = 20
+        gap = 4
+        n_rows = len(_KB_ROWS)
+        key_h = int((kb_h - (n_rows - 1) * gap) / n_rows)
         row_h = key_h + gap
-
         unit_px = (kb_w - (_KB_TOTAL_UNITS - 1) * gap) / _KB_TOTAL_UNITS
 
         for row_i, row in enumerate(_KB_ROWS):
-            # Center each row independently (minor width variations)
             row_units = sum(k[2] for k in row)
             row_w = row_units * unit_px + (len(row) - 1) * gap
             rx = kb_x + (kb_w - row_w) / 2
@@ -1922,160 +2388,78 @@ class GameScreen:
                 expected = name is not None and name in expected_keys
 
                 if pressed and expected:
-                    bg = _lc(BG_CARD, ACCENT_PURPLE, 0.7)
-                    border = ACCENT_PURPLE
+                    bg = _lc(BG_CARD, ACCENT_PINK, 0.65)
+                    border = ACCENT_PINK
                     text_col = TEXT_PRIMARY
                 elif pressed:
-                    bg = _lc(BG_CARD, ACCENT_BLUE, 0.6)
-                    border = ACCENT_BLUE
+                    bg = _lc(BG_CARD, ACCENT_PURPLE, 0.55)
+                    border = ACCENT_PURPLE
                     text_col = TEXT_PRIMARY
                 elif expected:
-                    bg = _lc(BG_CARD, ACCENT_GREEN, 0.35)
-                    border = _lc(BORDER_COLOR, ACCENT_GREEN, 0.6)
-                    text_col = _lc(TEXT_DIM, ACCENT_GREEN, 0.7)
+                    bg = _lc(BG_CARD, ACCENT_CYAN, 0.3)
+                    border = _lc(BORDER_COLOR, ACCENT_CYAN, 0.6)
+                    text_col = _lc(TEXT_DIM, ACCENT_CYAN, 0.7)
                 else:
                     bg = BG_CARD
                     border = BORDER_COLOR
                     text_col = TEXT_DIM
 
-                pygame.draw.rect(surface, bg, krect, border_radius=3)
-                pygame.draw.rect(surface, border, krect, width=1, border_radius=3)
+                pygame.draw.rect(surface, bg, krect, border_radius=4)
+                pygame.draw.rect(surface, border, krect, width=1, border_radius=4)
 
-                # Label — smaller font for wide-label keys
-                lbl_size = 8 if len(label) > 3 else 9
+                lbl_size = max(9, min(14, int(key_h * 0.45)))
+                if len(label) > 3:
+                    lbl_size = max(8, lbl_size - 3)
                 draw_text(surface, label, krect.centerx, krect.centery,
                           text_col, lbl_size, anchor="center")
 
                 rx += kw + gap
 
-    def _draw_panel(self, surface, w, h, panel_w):
-        px = w - panel_w
+    def _draw_numpad(self, surface, nx, ny, nw, nh, highlight_keys, expected_keys):
+        """Draw the numeric keypad on the right side of the bottom strip.
 
-        # Panel background with subtle gradient feel
-        panel_rect = pygame.Rect(px, 0, panel_w, h)
-        pygame.draw.rect(surface, BG_PANEL, panel_rect)
-        # Left edge highlight
-        pygame.draw.line(surface, BORDER_COLOR, (px, 0), (px, h), 1)
+        Uses _NUMPAD_KEYS layout: (label, name, col, row, colspan, rowspan).
+        Grid is 4 cols × 5 rows.
+        """
+        gap = 4
+        cols = 4
+        rows = 5
+        cell_w = int((nw - (cols - 1) * gap) / cols)
+        cell_h = int((nh - (rows - 1) * gap) / rows)
 
-        # Title
-        draw_text(surface, "UPGRADES", px + panel_w // 2, 14, TEXT_SECONDARY, 16,
-                  bold=True, anchor="midtop")
-        # Points
-        draw_text_glow(surface, f"{self.state.available_score} pts",
-                       px + panel_w // 2, 35, ACCENT_GOLD, size=18, bold=True,
-                       anchor="midtop", glow_alpha=20)
+        for label, name, col, row, colspan, rowspan in _NUMPAD_KEYS:
+            kx = nx + col * (cell_w + gap)
+            ky = ny + row * (cell_h + gap)
+            kw = cell_w * colspan + gap * (colspan - 1)
+            kh = cell_h * rowspan + gap * (rowspan - 1)
+            krect = pygame.Rect(kx, ky, kw, kh)
 
-        # Upgrade buttons
-        y = 62
-        self.upgrade_rects = {}
-        for uid, udata in UPGRADES.items():
-            cost = self.state.upgrade_costs[uid]
-            count = self.state.upgrade_counts[uid]
-            can_buy = self.state.available_score >= cost
-            hovered = self.hovered_upgrade == uid
+            pressed = name in highlight_keys
+            expected = name in expected_keys
 
-            btn_rect = pygame.Rect(px + 10, y, panel_w - 20, 62)
-            self.upgrade_rects[uid] = btn_rect
-
-            if hovered and can_buy:
-                draw_glow_rect(surface, btn_rect, BG_CARD_HOVER, ACCENT_BLUE,
-                               radius=10, glow_radius=6, glow_alpha=40)
-            elif can_buy:
-                draw_shadow_rect(surface, btn_rect, BG_CARD, radius=10, border=1,
-                                 border_color=BORDER_COLOR, shadow_offset=2, shadow_alpha=30)
+            if pressed and expected:
+                bg = _lc(BG_CARD, ACCENT_PINK, 0.65)
+                border = ACCENT_PINK
+                text_col = TEXT_PRIMARY
+            elif pressed:
+                bg = _lc(BG_CARD, ACCENT_PURPLE, 0.55)
+                border = ACCENT_PURPLE
+                text_col = TEXT_PRIMARY
+            elif expected:
+                bg = _lc(BG_CARD, ACCENT_CYAN, 0.3)
+                border = _lc(BORDER_COLOR, ACCENT_CYAN, 0.6)
+                text_col = _lc(TEXT_DIM, ACCENT_CYAN, 0.7)
             else:
-                draw_rounded_rect(surface, btn_rect, BG_CARD_LOCKED, radius=10, border=1,
-                                  border_color=BORDER_COLOR)
+                bg = BG_CARD
+                border = BORDER_COLOR
+                text_col = TEXT_DIM
 
-            text_col = TEXT_PRIMARY if can_buy else TEXT_DIM
-            draw_text(surface, udata['icon'], px + 20, y + 8,
-                      ACCENT_BLUE if can_buy else TEXT_DIM, 18, bold=True)
-            draw_text(surface, udata['name'], px + 48, y + 8, text_col, 16, bold=True)
-            if count > 0:
-                draw_text(surface, f"x{count}", px + panel_w - 20, y + 8,
-                          ACCENT_GREEN, 14, bold=True, anchor="topright")
+            pygame.draw.rect(surface, bg, krect, border_radius=4)
+            pygame.draw.rect(surface, border, krect, width=1, border_radius=4)
 
-            cost_col = ACCENT_GOLD if can_buy else TEXT_DIM
-            draw_text(surface, f"{cost} pts", px + 20, y + 32, cost_col, 12)
-            draw_text(surface, udata['description'], px + 20, y + 47, TEXT_DIM, 11,
-                      max_width=panel_w - 40)
-            y += 72
-
-        # Category unlock
-        y += 8
-        next_cost = self.state.next_category_unlock_cost()
-        if next_cost is not None:
-            next_idx = len(self.state.unlocked_categories)
-            next_cat = self.state.all_categories[next_idx] if next_idx < len(self.state.all_categories) else "?"
-            can_unlock = self.state.available_score >= next_cost
-
-            btn_rect = pygame.Rect(px + 10, y, panel_w - 20, 50)
-            self.cat_unlock_rect = btn_rect
-            if can_unlock:
-                draw_shadow_rect(surface, btn_rect, BG_CARD, radius=10, border=1,
-                                 border_color=ACCENT_PURPLE, shadow_offset=2, shadow_alpha=30)
-            else:
-                draw_rounded_rect(surface, btn_rect, BG_CARD_LOCKED, radius=10, border=1,
-                                  border_color=BORDER_COLOR)
-            text_col = TEXT_PRIMARY if can_unlock else TEXT_DIM
-            draw_text(surface, f"Débloquer : {next_cat}", px + 20, y + 8, text_col, 14,
-                      bold=True, max_width=panel_w - 40)
-            draw_text(surface, f"{next_cost} pts", px + 20, y + 30,
-                      ACCENT_GOLD if can_unlock else TEXT_DIM, 12)
-            y += 58
-        else:
-            self.cat_unlock_rect = None
-
-        # Categories list
-        y += 5
-        draw_text(surface, "Catégories :", px + 15, y, TEXT_SECONDARY, 13, bold=True)
-        y += 20
-        for cat in self.state.all_categories:
-            unlocked = cat in self.state.unlocked_categories
-            if unlocked:
-                pygame.draw.circle(surface, ACCENT_GREEN, (px + 22, y + 6), 4)
-            else:
-                pygame.draw.circle(surface, TEXT_DIM, (px + 22, y + 6), 4, 1)
-            color = TEXT_PRIMARY if unlocked else TEXT_DIM
-            draw_text(surface, cat, px + 32, y, color, 13)
-            y += 19
-
-    def _draw_action_buttons(self, surface, cx, h):
-        self.action_rects = {}
-        actions = [
-            ('skip', 'Skip', self.state.upgrade_counts.get('skip', 0)),
-            ('reveal', 'Révéler', self.state.upgrade_counts.get('reveal', 0)),
-            ('freeze', 'Freeze', self.state.upgrade_counts.get('freeze', 0)),
-            ('double', 'x2 Pts', self.state.upgrade_counts.get('double', 0)),
-        ]
-        btn_w = 95
-        btn_h = 36
-        gap = 10
-        total = len(actions) * btn_w + (len(actions) - 1) * gap
-        x = cx - total // 2
-        y = h - 52
-
-        mouse = pygame.mouse.get_pos()
-        for action_id, label, count in actions:
-            rect = pygame.Rect(x, y, btn_w, btn_h)
-            self.action_rects[action_id] = rect
-            has = count > 0
-            hover = rect.collidepoint(mouse) and has
-
-            if hover:
-                draw_glow_rect(surface, rect, BG_CARD_HOVER, ACCENT_BLUE,
-                               radius=8, glow_radius=5, glow_alpha=40)
-            elif has:
-                draw_shadow_rect(surface, rect, BG_CARD, radius=8, border=1,
-                                 border_color=BORDER_COLOR, shadow_offset=2, shadow_alpha=30)
-            else:
-                draw_rounded_rect(surface, rect, BG_CARD_LOCKED, radius=8, border=1,
-                                  border_color=BORDER_COLOR)
-
-            col = TEXT_PRIMARY if has else TEXT_DIM
-            draw_text(surface, f"{label} ({count})", rect.centerx, rect.centery,
-                      col, 13, bold=has, anchor="center")
-            x += btn_w + gap
+            lbl_size = max(10, min(15, int(cell_h * 0.5)))
+            draw_text(surface, label, krect.centerx, krect.centery,
+                      text_col, lbl_size, bold=True, anchor="center")
 
 
 # ---------------------------------------------------------------------------

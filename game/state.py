@@ -7,7 +7,8 @@ import time
 
 from game.config import (
     POINTS, CATEGORY_UNLOCK_COST_BASE, CATEGORY_UNLOCK_COST_MULT,
-    UPGRADES, TIMER_BASE, TIMER_MIN, TIMER_DECAY_PER_LEVEL, DIFF3_UNLOCK_SCORE,
+    POWERS, UPGRADES, TIMER_BASE, TIMER_MIN, TIMER_DECAY_PER_LEVEL,
+    DIFF3_UNLOCK_SCORE,
 )
 
 
@@ -45,8 +46,11 @@ class GameState:
         self.total_wrong = 0
         self.level = 1
         self.unlocked_categories = [self.all_categories[0]] if self.all_categories else []
-        self.upgrade_counts = {k: 0 for k in UPGRADES}
-        self.upgrade_costs = {k: v['base_cost'] for k, v in UPGRADES.items()}
+        # Design v4: powers are score-gated, not inventory-based. These legacy
+        # dicts are retained for save-file backwards-compat but no longer drive
+        # gameplay. `is_power_unlocked()` uses lifetime score.
+        self.upgrade_counts = {k: 0 for k in POWERS}
+        self.upgrade_costs = {k: v['use_cost'] for k, v in POWERS.items()}
 
         # Active effects
         self.freeze_until = 0.0
@@ -113,55 +117,86 @@ class GameState:
         self.combo = 0
         self.total_wrong += 1
 
-    def buy_upgrade(self, upgrade_id):
-        """Try to buy an upgrade. Returns True if successful."""
-        if upgrade_id not in UPGRADES:
+    # ── Score-gated powers (Design v4) ────────────────────────────────────
+    def is_power_unlocked(self, power_id):
+        """A power is permanently unlocked once lifetime score ≥ unlock_cost."""
+        p = POWERS.get(power_id)
+        if p is None:
             return False
-        cost = self.upgrade_costs[upgrade_id]
-        if self.available_score < cost:
+        return self.total_score >= p['unlock_cost']
+
+    def can_use_power(self, power_id):
+        """Unlocked AND available score covers the use cost."""
+        p = POWERS.get(power_id)
+        if p is None:
             return False
-        self.spent_score += cost
-        self.upgrade_counts[upgrade_id] += 1
-        self.upgrade_costs[upgrade_id] = int(
-            UPGRADES[upgrade_id]['base_cost']
-            * (UPGRADES[upgrade_id]['cost_mult'] ** self.upgrade_counts[upgrade_id])
-        )
+        return self.is_power_unlocked(power_id) and self.available_score >= p['use_cost']
+
+    def power_unlock_progress(self, power_id):
+        """Ratio 0..1 toward unlocking this power (for the lock overlay bar)."""
+        p = POWERS.get(power_id)
+        if p is None or p['unlock_cost'] <= 0:
+            return 1.0
+        return min(1.0, self.total_score / p['unlock_cost'])
+
+    def use_power(self, power_id):
+        """Pay the use cost and apply the power effect. Returns True on success.
+
+        Callers still handle the side effect (e.g. advancing shortcut on skip)
+        via the returned flags (`self.skipped`, `self.revealed`) or the
+        explicit effect applied here (`freeze_until`, `double_until`).
+        """
+        if not self.can_use_power(power_id):
+            return False
+        self.spent_score += POWERS[power_id]['use_cost']
+        if power_id == 'skip':
+            self.skipped = True
+        elif power_id == 'reveal':
+            self.revealed = True
+        elif power_id == 'freeze':
+            self.freeze_until = time.time() + 5.0
+        elif power_id == 'double':
+            self.double_until = time.time() + 15.0
         return True
 
+    # Legacy wrappers — kept so older callers keep compiling. They all route
+    # through use_power() now; the old "inventory count" model is gone.
+    def buy_upgrade(self, upgrade_id):
+        """Legacy API. Maps 'buy' to 'use' under the score-gated model."""
+        return self.use_power(upgrade_id)
+
     def use_skip(self):
-        if self.upgrade_counts['skip'] > 0:
-            self.upgrade_counts['skip'] -= 1
-            self.skipped = True
-            return True
-        return False
+        return self.use_power('skip')
 
     def use_reveal(self):
-        if self.upgrade_counts['reveal'] > 0:
-            self.upgrade_counts['reveal'] -= 1
-            self.revealed = True
-            return True
-        return False
+        return self.use_power('reveal')
 
     def use_freeze(self):
-        if self.upgrade_counts['freeze'] > 0:
-            self.upgrade_counts['freeze'] -= 1
-            self.freeze_until = time.time() + 5.0
-            return True
-        return False
+        return self.use_power('freeze')
 
     def use_double(self):
-        if self.upgrade_counts['double'] > 0:
-            self.upgrade_counts['double'] -= 1
-            self.double_until = time.time() + 15.0
-            return True
-        return False
+        return self.use_power('double')
 
     def next_category_unlock_cost(self):
-        """Cost to unlock next category."""
+        """Cost to unlock next category (design v4: round(150 * 1.5^i))."""
         unlocked = len(self.unlocked_categories)
         if unlocked >= len(self.all_categories):
             return None
-        return int(CATEGORY_UNLOCK_COST_BASE * (CATEGORY_UNLOCK_COST_MULT ** (unlocked - 1)))
+        return int(round(CATEGORY_UNLOCK_COST_BASE * (CATEGORY_UNLOCK_COST_MULT ** (unlocked - 1))))
+
+    def next_category_name(self):
+        """Name of the next locked category, or None if all unlocked."""
+        unlocked = len(self.unlocked_categories)
+        if unlocked >= len(self.all_categories):
+            return None
+        return self.all_categories[unlocked]
+
+    def next_category_unlock_progress(self):
+        """Ratio 0..1 of available score toward the next unlock cost."""
+        cost = self.next_category_unlock_cost()
+        if cost is None or cost <= 0:
+            return 1.0
+        return min(1.0, self.available_score / cost)
 
     def unlock_next_category(self):
         """Try to unlock next category."""

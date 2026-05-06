@@ -38,6 +38,7 @@ jobs:
           $cmd = "python -m PyInstaller --onefile --windowed --name PTShortcuts ``
             --manifest ptshortcuts.manifest ``
             --add-data `"shortcuts;shortcuts`" ``
+            --add-data `"assets;assets`" ``
             --hidden-import pynput.keyboard._win32 ``
             --hidden-import pynput.mouse._win32 ``
             $extra ``
@@ -83,6 +84,7 @@ jobs:
             --windowed \
             --name PTShortcuts \
             --add-data "shortcuts:shortcuts" \
+            --add-data "assets:assets" \
             $EXTRA \
             --hidden-import "pynput.keyboard._darwin" \
             --hidden-import "pynput.mouse._darwin" \

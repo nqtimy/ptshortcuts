@@ -1,4 +1,13 @@
-"""Game constants and configuration."""
+"""Game constants and configuration.
+
+Palette & typography migrated to Design v4 — neon violet/pink on deep dark bg.
+Hex references:
+  bg=#07070f, bgCard=#0e0e1a, bgCard2=#13131f, bgPanel=#17172a
+  border=#1f1f38, borderHi=#3a3a70
+  textPrimary=#eeeeff, textSecondary=#7777aa, textDim=#3a3a60
+  accent=#a855f7 (violet), pink=#e879f9, green=#22d3ee (cyan), red=#f43f5e,
+  orange=#fb923c, gold=#facc15
+"""
 
 import sys
 
@@ -12,42 +21,51 @@ DEFAULT_WIDTH = 1280
 DEFAULT_HEIGHT = 720
 FPS = 60
 
-# Colors (dark DAW theme)
-BG_COLOR = (24, 24, 30)
-BG_SECONDARY = (32, 32, 40)
-BG_PANEL = (38, 38, 48)
-BG_CARD = (44, 44, 56)
-BG_CARD_HOVER = (54, 54, 68)
-BG_CARD_LOCKED = (30, 30, 36)
-BG_CONTEXT = (50, 45, 30)
-BORDER_COLOR = (60, 60, 75)
-BORDER_HIGHLIGHT = (100, 100, 130)
+# ── Colors (Design v4: dark violet/pink neon) ────────────────────────────────
+BG_COLOR = (7, 7, 15)            # #07070f
+BG_SECONDARY = (14, 14, 26)      # #0e0e1a (bgCard)
+BG_CARD = (14, 14, 26)           # #0e0e1a
+BG_CARD_2 = (19, 19, 31)         # #13131f
+BG_PANEL = (23, 23, 42)          # #17172a
+BG_CARD_HOVER = (28, 28, 50)
+BG_CARD_LOCKED = (10, 10, 18)
+BG_CONTEXT = BG_CARD_2           # context sits inside card, no yellow tint anymore
 
-TEXT_PRIMARY = (230, 230, 240)
-TEXT_SECONDARY = (160, 160, 175)
-TEXT_DIM = (100, 100, 115)
-TEXT_LOCKED = (70, 70, 80)
+BORDER_COLOR = (31, 31, 56)      # #1f1f38
+BORDER_HIGHLIGHT = (58, 58, 112) # #3a3a70
 
-ACCENT_BLUE = (80, 140, 240)
-ACCENT_GREEN = (60, 200, 120)
-ACCENT_RED = (220, 60, 70)
-ACCENT_ORANGE = (240, 160, 40)
-ACCENT_GOLD = (255, 200, 50)
-ACCENT_PURPLE = (160, 100, 240)
+TEXT_PRIMARY = (238, 238, 255)   # #eeeeff
+TEXT_SECONDARY = (119, 119, 170) # #7777aa
+TEXT_DIM = (90, 90, 130)         # slightly brighter than design's #3a3a60 for pygame readability
+TEXT_LOCKED = (58, 58, 96)       # #3a3a60 — use for deep-locked elements
 
-TIMER_FULL = (60, 200, 120)
-TIMER_MID = (240, 200, 40)
-TIMER_LOW = (220, 60, 70)
+# Accent colors
+ACCENT_PURPLE = (168, 85, 247)   # #a855f7 — primary accent
+ACCENT_PINK = (232, 121, 249)    # #e879f9 — secondary gradient partner
+ACCENT_CYAN = (34, 211, 238)     # #22d3ee — success / timer full
+ACCENT_GREEN = ACCENT_CYAN       # alias (design uses cyan as "green/success")
+ACCENT_RED = (244, 63, 94)       # #f43f5e
+ACCENT_ORANGE = (251, 146, 60)   # #fb923c
+ACCENT_GOLD = (250, 204, 21)     # #facc15
 
-# Combo colors
+# Kept for AZERTY/QWERTY dual display: blue stays distinct from violet
+ACCENT_BLUE = (96, 165, 250)     # #60a5fa — used only for dual-display contrast
+
+# Timer bar colors (>50% cyan, >25% gold, <25% red+pulse)
+TIMER_FULL = ACCENT_CYAN
+TIMER_MID = ACCENT_GOLD
+TIMER_LOW = ACCENT_RED
+
+# Combo color progression (design v4)
 COMBO_COLORS = {
-    1: TEXT_PRIMARY,
-    2: (150, 200, 255),
-    3: (100, 180, 255),
-    5: ACCENT_GOLD,
-    8: ACCENT_ORANGE,
-    10: ACCENT_RED,
-    15: ACCENT_PURPLE,
+    1: TEXT_DIM,
+    2: ACCENT_PURPLE,
+    3: ACCENT_PURPLE,
+    5: ACCENT_CYAN,
+    8: ACCENT_GOLD,
+    10: ACCENT_ORANGE,
+    15: ACCENT_RED,
+    20: ACCENT_PINK,
 }
 
 # Points per difficulty
@@ -58,43 +76,66 @@ TIMER_BASE = 10.0
 TIMER_MIN = 3.0
 TIMER_DECAY_PER_LEVEL = 0.3
 
-# Difficulty 3 unlock threshold (score)
+# Difficulty 3 unlock threshold (lifetime score)
 DIFF3_UNLOCK_SCORE = 200
 
-# Category unlock cost (points to unlock next category)
+# Lesson unlock cost: round(150 * 1.5^i) per lesson index (design v4)
 CATEGORY_UNLOCK_COST_BASE = 150
 CATEGORY_UNLOCK_COST_MULT = 1.5
 
-# Upgrades
-UPGRADES = {
+# ── Score-gated Powers (Design v4) ────────────────────────────────────────────
+# Powers unlock automatically once the player's LIFETIME score reaches
+# `unlock_cost`. Using a power then deducts `use_cost` from AVAILABLE score.
+POWERS = {
     "skip": {
         "name": "Skip",
-        "description": "Passer le raccourci actuel",
+        "description": "Passer le raccourci",
         "icon": ">>",
-        "base_cost": 50,
-        "cost_mult": 1.3,
+        "unlock_cost": 0,
+        "use_cost": 50,
+        "color": (119, 119, 170),   # TEXT_SECONDARY (neutral)
+        "order": 0,
     },
     "reveal": {
         "name": "Révéler",
-        "description": "Afficher la réponse",
-        "icon": "?!",
-        "base_cost": 80,
-        "cost_mult": 1.4,
+        "description": "Voir la réponse",
+        "icon": "()",
+        "unlock_cost": 150,
+        "use_cost": 80,
+        "color": ACCENT_PINK,
+        "order": 1,
     },
     "freeze": {
         "name": "Freeze",
         "description": "Geler le timer 5s",
         "icon": "**",
-        "base_cost": 60,
-        "cost_mult": 1.3,
+        "unlock_cost": 350,
+        "use_cost": 60,
+        "color": ACCENT_CYAN,
+        "order": 2,
     },
     "double": {
-        "name": "x2 Points",
-        "description": "Double points 15s",
+        "name": "Double",
+        "description": "x2 pts pendant 15s",
         "icon": "x2",
-        "base_cost": 120,
-        "cost_mult": 1.5,
+        "unlock_cost": 700,
+        "use_cost": 120,
+        "color": ACCENT_GOLD,
+        "order": 3,
     },
+}
+
+# Backwards-compat alias so legacy imports of UPGRADES don't break during the
+# transition. Phase B will migrate state.py to POWERS; legacy reads still work.
+UPGRADES = {
+    k: {
+        "name": v["name"],
+        "description": v["description"],
+        "icon": v["icon"],
+        "base_cost": v["use_cost"],
+        "cost_mult": 1.0,
+    }
+    for k, v in POWERS.items()
 }
 
 # Key display names (for rendering pressed keys)
@@ -111,20 +152,20 @@ KEY_DISPLAY = {
     "Escape": "Esc",
 }
 
-# --- Visual / Animation constants ---
+# ── Visual / Animation constants ──────────────────────────────────────────────
 
 # Screen shake
-SHAKE_CORRECT = 4        # pixels, small shake on correct
-SHAKE_WRONG = 8          # medium shake on wrong
-SHAKE_GAME_OVER = 16     # big shake on game over
-SHAKE_DECAY = 0.85       # multiply each frame
+SHAKE_CORRECT = 4
+SHAKE_WRONG = 8
+SHAKE_GAME_OVER = 16
+SHAKE_DECAY = 0.85
 
 # Particle counts
 PARTICLES_CORRECT = 40
 PARTICLES_CORRECT_HIGH = 80
 PARTICLES_WRONG = 15
 PARTICLES_MILESTONE = 120
-PARTICLES_EMBER_RATE = 3   # embers per frame at high combo
+PARTICLES_EMBER_RATE = 3
 MAX_PARTICLES = 400
 
 # Combo milestones (firework ring at these values)
@@ -134,6 +175,18 @@ COMBO_MILESTONES = {5, 10, 15, 20, 25, 30, 50}
 SHADOW_OFFSET = 4
 SHADOW_ALPHA = 60
 
-# Font preference order (rounded, impactful)
-FONT_NAMES = ['Bahnschrift', 'Segoe UI', 'Calibri', 'Arial', 'sans-serif']
-FONT_NAMES_BOLD = ['Bahnschrift', 'Segoe UI', 'Calibri', 'Arial', 'sans-serif']
+# Score counter animation duration (seconds) — ease-out cubic, design v4
+SCORE_ANIM_DURATION = 0.6
+
+# ── Typography (Design v4: Space Grotesk + JetBrains Mono) ───────────────────
+# Bahnschrift/Segoe UI kept as fallback for Windows without Space Grotesk
+# installed (commonly available since Win10).
+FONT_NAMES = [
+    'Space Grotesk', 'Inter', 'Bahnschrift', 'Segoe UI', 'Calibri', 'Arial',
+    'sans-serif',
+]
+FONT_NAMES_BOLD = FONT_NAMES  # same preference order, bold flag set at render
+FONT_NAMES_MONO = [
+    'JetBrains Mono', 'Fira Code', 'Cascadia Mono', 'Consolas', 'Menlo',
+    'Courier New', 'monospace',
+]

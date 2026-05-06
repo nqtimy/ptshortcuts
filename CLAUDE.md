@@ -30,6 +30,9 @@ game/
   screens.py         → MenuScreen, GameScreen, StatsScreen, LeaderboardScreen
 shortcuts/
   *.json             → Raccourcis par certification (101, 110, 130, 201, 210M, 210P, 205D, 210D)
+assets/
+  SpaceGrotesk-*.ttf → Police sans (Regular/Bold statiques + Variable fallback)
+  JetBrainsMono-*.ttf→ Police mono (Regular + Bold) pour score/mono tags
 supabase_config.json → URL + anon key Supabase (non commité) — embarqué dans l'exe au build
 build.bat            → Build PyInstaller Windows (embarque supabase_config.json si présent)
 build_mac.sh         → Build PyInstaller macOS (embarque supabase_config.json si présent)
@@ -191,6 +194,21 @@ else:
 - **petit/gris** : notation de référence (ce que l'examen Avid demande)
 - **grand/coloré** : ce que l'utilisateur presse physiquement sur son clavier
 
+### Traduction QWERTY → AZERTY pour l'affichage (Windows uniquement)
+Les `keys_win` des JSON sont en notation QWERTY positionnelle (ce que la détection scan-code attend). Mais le label "Ton clavier (AZERTY)" promet à l'utilisateur le caractère qu'il voit imprimé sur sa touche. Sans traduction, on affiche `Ctrl+Alt+M` alors que le joueur AZERTY voit `,` à cette position.
+
+Helpers dans `screens.py` (juste après les constantes `_KEYS_BIG`) :
+- `_QWERTY_TO_AZERTY_DISPLAY` : dict de mapping (Q→A, W→Z, A→Q, Z→W, M→`,`, `;`→M, `'`→ù, `,`→`;`, `.`→`:`, `/`→`!`, `[`→^, `]`→$, `\`→`*`, `` ` ``→², `-`→`)`, `=`→`=`)
+- `_to_azerty_display(keys)` : transforme une liste plate, garde modifiers/F-keys/numpad/digits inchangés
+- `_to_azerty_display_seq(steps)` : version key_sequence (liste de listes)
+
+Appliqué uniquement quand `not IS_MAC` à 3 sites de rendu :
+1. APPUYEZ SUR card — `keys_big` principal (review/reveal)
+2. APPUYEZ SUR card — `alt_big` des raccourcis alternatifs
+3. Game over — `go_big` principal et `alt_big` des alts
+
+**La détection n'est jamais affectée** : elle continue d'utiliser les noms QWERTY positionnels via scan codes. La traduction est purement cosmétique pour le rendu sur le côté "Ton clavier (AZERTY)".
+
 ## Menu principal
 - **Carrousel certification** : navigation gauche/droite entre les certifs (CERT_ORDER dans screens.py). Animation slide (position/target lerp, ±110px) + mini bar-chart difficulté dans la carte.
 - **Pills difficulté** : 3 boutons cliquables (Facile/Interm./Difficile) avec hover fade. Raccourcis clavier 1/2/3 pour changer directement.
@@ -287,15 +305,25 @@ Layout QWERTY Mac en 5 rangées (`_KB_ROWS`), unités de largeur proportionnelle
 Déposer un fichier JSON dans `shortcuts/` avec la structure `keys_mac`/`keys_win`/`input_type` (voir 210M.json).
 L'ordre d'affichage est défini dans `CERT_ORDER` (screens.py). Les certifs non listées apparaissent après, par ordre alphabétique.
 
+## Polices embarquées (assets/)
+Le dossier `assets/` contient les TTF utilisés par `renderer.get_font()` :
+- `SpaceGrotesk-Regular.ttf` + `SpaceGrotesk-Bold.ttf` (instances statiques) — police sans par défaut
+- `SpaceGrotesk-Variable.ttf` — fallback si les statiques manquent
+- `JetBrainsMono-Regular.ttf` + `JetBrainsMono-Bold.ttf` — police mono (`mono=True`) pour score, coûts, mono tags
+
+`_find_custom_fonts()` dans `renderer.py` détecte les fichiers par nom (`spacegrotesk`/`jetbrainsmono` + `bold` ou `regular`) et peuple un dict `{sans, sans_bold, mono, mono_bold}`. Préfère **toujours** les instances statiques aux variables : à petite taille, le hinting du fichier Variable produit des glyphes asymétriques (ex: un `b` au contrepoinçon plus petit que celui d'un `o`). Seule situation où `set_bold(True)` (faux-gras pygame) est appliqué : pas de fichier Bold distinct disponible.
+
+Les fichiers doivent être embarqués dans les builds PyInstaller via `--add-data "assets;assets"` (Windows) ou `"assets:assets"` (macOS/CI).
+
 ## Build
 **Windows** : `build.bat` (recommandé) — installe les dépendances, embarque `supabase_config.json` si présent, génère `dist/PTShortcuts.exe`.
 
 Commande manuelle :
 ```
-python -m PyInstaller --onefile --windowed --name PTShortcuts --manifest ptshortcuts.manifest --add-data "shortcuts;shortcuts" --add-data "supabase_config.json;." --hidden-import pynput.keyboard._win32 --hidden-import pynput.mouse._win32 main.py
+python -m PyInstaller --onefile --windowed --name PTShortcuts --manifest ptshortcuts.manifest --add-data "shortcuts;shortcuts" --add-data "assets;assets" --add-data "supabase_config.json;." --hidden-import pynput.keyboard._win32 --hidden-import pynput.mouse._win32 main.py
 ```
 
-**macOS** : `bash build_mac.sh` — embarque `supabase_config.json` si présent. PyInstaller, pyobjc-framework-Quartz optionnel pour suppression Cmd.
+**macOS** : `bash build_mac.sh` — embarque `supabase_config.json` si présent + le dossier `assets/`. PyInstaller, pyobjc-framework-Quartz optionnel pour suppression Cmd.
 
 **CI/CD** : `.github/workflows/build.yml` — déclenché sur push `main` ou tag `v*`. Crée une GitHub Release avec les deux binaires sur tag.
 Pour embarquer Supabase dans les releases CI, ajouter deux secrets GitHub (`Settings → Secrets → Actions`) :
