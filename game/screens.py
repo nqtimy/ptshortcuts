@@ -566,8 +566,12 @@ class MenuScreen:
         now = time.time()
         age = now - self.birth
         mouse = pygame.mouse.get_pos()
-        # Faster color transition (~0.3s) — matches the panel crossfade duration.
-        self._custom_mode_t += ((1.0 if self.custom_mode else 0.0) - self._custom_mode_t) * _lf(0.22, dt)
+        # Slow chrome color transition (~1s) — title glow, card, accents
+        # ease between blue→red while the panel content swaps quickly via the
+        # snapshot crossfade below. The two animations run independently so
+        # spam-toggling never glitches: rmt always lerps toward the current
+        # state, and each toggle just freezes the latest panel snapshot.
+        self._custom_mode_t += ((1.0 if self.custom_mode else 0.0) - self._custom_mode_t) * _lf(0.07, dt)
         rmt = self._custom_mode_t
         # Design v4: violet/pink in normal mode, red/orange in review mode
         page_accent = _lc(ACCENT_PURPLE, ACCENT_RED, rmt)
@@ -698,8 +702,13 @@ class MenuScreen:
             card_x = (w - card_w) // 2
             card_rect = pygame.Rect(card_x, carousel_top, card_w, card_h)
 
-            # Entrance animation (vertical)
-            slide = max(0, 20 * (1.0 - min(1.0, age / 0.4)))
+            # Entrance animation: ease-out cubic over 1.5s — the card and
+            # everything cascading from it (dots, pills, ctrl_top) lift into
+            # place with a decelerating velocity curve, like an AE ease-out.
+            INTRO_SLIDE_DUR = 1.5
+            sp = max(0.0, min(1.0, age / INTRO_SLIDE_DUR))
+            sp_eased = 1.0 - (1.0 - sp) ** 3
+            slide = 20 * (1.0 - sp_eased)
             card_rect.y += int(slide)
 
             # Small directional slide (hint only, no saccade)
@@ -1100,8 +1109,9 @@ class MenuScreen:
                       TEXT_DIM, 12, anchor="center")
 
         # ── Intro fade-in (slow & progressive) ────────────────────────────
-        # Whole menu fades up from black on the first ~1.6s after construction.
-        INTRO_DUR = 1.6
+        # Whole menu fades up from black over ~3.5s with a soft ease-out so
+        # the reveal feels gentle: the curve stays bright early then trails off.
+        INTRO_DUR = 3.5
         if age < INTRO_DUR:
             t = age / INTRO_DUR
             t_eased = 1.0 - (1.0 - t) ** 3  # ease-out cubic
