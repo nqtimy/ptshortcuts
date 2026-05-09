@@ -155,6 +155,17 @@ class MenuScreen:
         # Custom-mode hover fades (keyed by option / cert name).
         self._opt_hover_t = {}
         self._cert_check_hover_t = {}
+        # Custom-mode toggle animations (0..1 lerp toward active state).
+        self._opt_anim_t = {}
+        self._cert_anim_t = {}
+        # Mode-toggle crossfade: capture a snapshot of the panel area each
+        # frame; when the user flips the mode, we freeze the previous-mode
+        # snapshot and overlay it with decreasing alpha for ~0.3s.
+        self._prev_custom_mode = False
+        self._panel_snapshot = None       # snapshot of last frame's panel
+        self._panel_snapshot_top = 0
+        self._transition_fade_snap = None # frozen snap during transition
+        self._transition_start = -10.0    # epoch; far past = not transitioning
 
         # Button rects for hit-testing
         self._cert_left_rect = None
@@ -285,28 +296,37 @@ class MenuScreen:
             ht += ((1.0 if is_hov else 0.0) - ht) * _lf(0.14, dt)
             self._opt_hover_t[opt_id] = ht
 
-            border_target = page_accent if val else BORDER_COLOR
+            # Animated toggle: knob slides smoothly between off/on positions
+            # (sub-pixel ease so re-clicking quickly looks fluid, not snappy).
+            anim_t = self._opt_anim_t.get(opt_id, 1.0 if val else 0.0)
+            anim_target = 1.0 if val else 0.0
+            anim_t += (anim_target - anim_t) * _lf(0.22, dt)
+            self._opt_anim_t[opt_id] = anim_t
+
+            border_target = _lc(BORDER_COLOR, page_accent, anim_t)
             bg_c = _lc(BG_CARD, BG_CARD_HOVER, ht)
             bc_c = _lc(border_target, page_accent, ht * 0.5)
             draw_shadow_rect(surface, rect, bg_c, radius=8, border=1,
                              border_color=bc_c, shadow_offset=2, shadow_alpha=15)
 
-            # Toggle knob
+            # Toggle knob (animated)
             kh = 14
             kw = 28
             kx = rect.x + 12
             ky = rect.centery
             krect = pygame.Rect(kx, ky - kh // 2, kw, kh)
-            kbg = _lc(BG_SECONDARY, page_accent, 1.0 if val else 0.0)
+            kbg = _lc(BG_SECONDARY, page_accent, anim_t)
             pygame.draw.rect(surface, kbg, krect, border_radius=kh // 2)
-            knob_x = krect.right - kh // 2 - 2 if val else krect.x + kh // 2 + 2
-            pygame.draw.circle(surface, TEXT_PRIMARY if val else TEXT_DIM,
-                               (knob_x, ky), kh // 2 - 2)
+            knob_left = krect.x + kh // 2 + 2
+            knob_right = krect.right - kh // 2 - 2
+            knob_x = int(knob_left + (knob_right - knob_left) * anim_t)
+            knob_color = _lc(TEXT_DIM, TEXT_PRIMARY, anim_t)
+            pygame.draw.circle(surface, knob_color, (knob_x, ky), kh // 2 - 2)
 
             # Always render bold to avoid the thin-stroke pixelation that the
             # static Space Grotesk Regular shows at small sizes — the active vs
             # inactive distinction is conveyed via color instead of weight.
-            text_col = _lc(TEXT_SECONDARY, TEXT_PRIMARY, 1.0 if val else 0.0)
+            text_col = _lc(TEXT_SECONDARY, TEXT_PRIMARY, anim_t)
             draw_text(surface, lbl, krect.right + 12, ky, text_col, 15,
                       bold=True, anchor="midleft")
             opt_y += opt_h + opt_gap
@@ -340,29 +360,45 @@ class MenuScreen:
                 draw_text(surface, "Soon", crect.right - 10, crect.centery,
                           TEXT_DIM, 11, bold=True, anchor="midright")
             else:
+                # Animated check state: 0 = unchecked, 1 = checked
+                anim_t = self._cert_anim_t.get(cname, 1.0 if checked else 0.0)
+                anim_target = 1.0 if checked else 0.0
+                anim_t += (anim_target - anim_t) * _lf(0.22, dt)
+                self._cert_anim_t[cname] = anim_t
+
                 bg_c = _lc(BG_CARD, BG_CARD_HOVER, ht)
-                bc_c = _lc(BORDER_COLOR, page_accent,
-                           max(ht * 0.5, 1.0 if checked else 0.0))
+                bc_c = _lc(BORDER_COLOR, page_accent, max(ht * 0.5, anim_t))
                 draw_shadow_rect(surface, crect, bg_c, radius=6, border=1,
                                  border_color=bc_c, shadow_offset=2, shadow_alpha=15)
-                # Checkbox
+                # Checkbox: box fills with the accent as anim_t rises
                 bs = 14
                 bx = crect.x + 10
                 by = crect.centery - bs // 2
                 box_rect = pygame.Rect(bx, by, bs, bs)
-                if checked:
-                    pygame.draw.rect(surface, page_accent, box_rect, border_radius=3)
-                    p1 = (bx + 3, by + bs // 2)
-                    p2 = (bx + bs // 2 - 1, by + bs - 4)
-                    p3 = (bx + bs - 3, by + 3)
-                    pygame.draw.lines(surface, BG_COLOR, False, [p1, p2, p3], 2)
-                else:
-                    pygame.draw.rect(surface, BG_SECONDARY, box_rect, border_radius=3)
-                    pygame.draw.rect(surface, _lc(BORDER_COLOR, page_accent, ht),
-                                     box_rect, width=1, border_radius=3)
+                box_fill = _lc(BG_SECONDARY, page_accent, anim_t)
+                pygame.draw.rect(surface, box_fill, box_rect, border_radius=3)
+                box_border = _lc(_lc(BORDER_COLOR, page_accent, ht),
+                                 page_accent, anim_t)
+                pygame.draw.rect(surface, box_border, box_rect, width=1,
+                                 border_radius=3)
+                # Check mark — pop-in scale + alpha fade synced to anim_t
+                if anim_t > 0.05:
+                    pop = min(1.0, anim_t * 1.3)
+                    cs_x, cs_y = bs // 2, bs // 2
+                    p1 = (cs_x + int((3 - cs_x) * pop),
+                          cs_y + int((bs // 2 - cs_y) * pop))
+                    p2 = (cs_x + int((bs // 2 - 1 - cs_x) * pop),
+                          cs_y + int((bs - 4 - cs_y) * pop))
+                    p3 = (cs_x + int((bs - 3 - cs_x) * pop),
+                          cs_y + int((3 - cs_y) * pop))
+                    cs_surf = pygame.Surface((bs, bs), pygame.SRCALPHA)
+                    pygame.draw.lines(cs_surf, BG_COLOR, False, [p1, p2, p3], 2)
+                    cs_surf.set_alpha(int(255 * anim_t))
+                    surface.blit(cs_surf, (bx, by))
+                # Name color follows the toggle progress.
+                text_col = _lc(TEXT_SECONDARY, TEXT_PRIMARY, anim_t)
                 draw_text(surface, cname, bx + bs + 10, crect.centery,
-                          TEXT_PRIMARY if checked else TEXT_SECONDARY, 15,
-                          bold=True, anchor="midleft")
+                          text_col, 15, bold=True, anchor="midleft")
 
         # Match the classic carousel+pills section height so the separator,
         # mode toggle and JOUER button stay at the same Y when toggling modes.
@@ -530,7 +566,8 @@ class MenuScreen:
         now = time.time()
         age = now - self.birth
         mouse = pygame.mouse.get_pos()
-        self._custom_mode_t += ((1.0 if self.custom_mode else 0.0) - self._custom_mode_t) * _lf(0.05, dt)
+        # Faster color transition (~0.3s) — matches the panel crossfade duration.
+        self._custom_mode_t += ((1.0 if self.custom_mode else 0.0) - self._custom_mode_t) * _lf(0.22, dt)
         rmt = self._custom_mode_t
         # Design v4: violet/pink in normal mode, red/orange in review mode
         page_accent = _lc(ACCENT_PURPLE, ACCENT_RED, rmt)
@@ -616,6 +653,18 @@ class MenuScreen:
                                  (bx, bar_max_h - bar_h_half, hi_w, bar_h_half * 2 + 1),
                                  border_radius=2)
         surface.blit(wave_surf, (wave_x0, sep_y - bar_max_h))
+
+        # ── Mode-toggle transition: freeze the previous-mode panel snapshot.
+        # Detect the toggle BEFORE drawing the new panel so we have a clean
+        # before/after pair to crossfade.
+        mode_changed = self.custom_mode != self._prev_custom_mode
+        if mode_changed:
+            self._transition_fade_snap = self._panel_snapshot
+            self._transition_start = now
+            self._prev_custom_mode = self.custom_mode
+
+        panel_top = sep_y + 24
+        panel_h_const = 258  # matches _draw_custom_panel's offset
 
         # ── Certification Carousel + Pills (or Custom panel) ───────────────
         cert_name = self.current_cert
@@ -794,6 +843,26 @@ class MenuScreen:
 
             ctrl_top = diff_top + pill_h + 20
 
+        # ── Mode-toggle crossfade overlay ─────────────────────────────────
+        # Snapshot the freshly-drawn panel BEFORE applying the fade overlay
+        # (so each frame's clean render gets cached for the next transition).
+        try:
+            snap_rect = pygame.Rect(0, panel_top, w, panel_h_const)
+            self._panel_snapshot = surface.subsurface(snap_rect).copy()
+            self._panel_snapshot_top = panel_top
+        except (ValueError, pygame.error):
+            self._panel_snapshot = None
+
+        TRANSITION_DUR = 0.28
+        elapsed_t = now - self._transition_start
+        if elapsed_t < TRANSITION_DUR and self._transition_fade_snap is not None:
+            t_norm = elapsed_t / TRANSITION_DUR
+            t_eased = 1.0 - (1.0 - t_norm) ** 3  # ease-out cubic
+            alpha = max(0, min(255, int(255 * (1.0 - t_eased))))
+            snap = self._transition_fade_snap.copy()
+            snap.set_alpha(alpha)
+            surface.blit(snap, (0, self._panel_snapshot_top))
+
         # ── Bottom Controls ────────────────────────────────────────────────
         # Separator
         pygame.draw.line(surface, BORDER_COLOR,
@@ -844,7 +913,7 @@ class MenuScreen:
         draw_text(surface, "Mode Custom", tog_rect.right + 10, custom_rect.centery - 6,
                   lbl_color, 15, bold=self.custom_mode, anchor="midleft")
         draw_text(surface, "[C]", tog_rect.right + 10, custom_rect.centery + 10,
-                  ACCENT_PURPLE if self.custom_mode else TEXT_DIM, 11, anchor="midleft")
+                  TEXT_PRIMARY if self.custom_mode else TEXT_DIM, 11, anchor="midleft")
 
         # Play button (right of center) — fixed position (no gravity/shake)
         play_w = 196
@@ -1029,6 +1098,18 @@ class MenuScreen:
             draw_text(surface, "Entrer un pseudo",
                       pseudo_rect.centerx, pseudo_rect.centery,
                       TEXT_DIM, 12, anchor="center")
+
+        # ── Intro fade-in (slow & progressive) ────────────────────────────
+        # Whole menu fades up from black on the first ~1.6s after construction.
+        INTRO_DUR = 1.6
+        if age < INTRO_DUR:
+            t = age / INTRO_DUR
+            t_eased = 1.0 - (1.0 - t) ** 3  # ease-out cubic
+            alpha = int(255 * (1.0 - t_eased))
+            if alpha > 0:
+                fade_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+                fade_overlay.fill((BG_COLOR[0], BG_COLOR[1], BG_COLOR[2], alpha))
+                surface.blit(fade_overlay, (0, 0))
 
 
 # ---------------------------------------------------------------------------
