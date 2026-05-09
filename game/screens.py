@@ -262,9 +262,9 @@ class MenuScreen:
         right_x = left_x + col_w + col_gap
 
         draw_text(surface, "Options", left_x + col_w // 2, top,
-                  TEXT_SECONDARY, 14, bold=True, anchor="midtop")
+                  TEXT_SECONDARY, 15, bold=True, anchor="midtop")
         draw_text(surface, "Certifications", right_x + col_w // 2, top,
-                  TEXT_SECONDARY, 14, bold=True, anchor="midtop")
+                  TEXT_SECONDARY, 15, bold=True, anchor="midtop")
         col_y = top + 22
 
         # ── Left column: 4 option toggles ──
@@ -303,9 +303,12 @@ class MenuScreen:
             pygame.draw.circle(surface, TEXT_PRIMARY if val else TEXT_DIM,
                                (knob_x, ky), kh // 2 - 2)
 
+            # Always render bold to avoid the thin-stroke pixelation that the
+            # static Space Grotesk Regular shows at small sizes — the active vs
+            # inactive distinction is conveyed via color instead of weight.
             text_col = _lc(TEXT_SECONDARY, TEXT_PRIMARY, 1.0 if val else 0.0)
-            draw_text(surface, lbl, krect.right + 12, ky, text_col, 14,
-                      bold=val, anchor="midleft")
+            draw_text(surface, lbl, krect.right + 12, ky, text_col, 15,
+                      bold=True, anchor="midleft")
             opt_y += opt_h + opt_gap
 
         # ── Right column: cert checklist (2-column grid) ──
@@ -333,9 +336,9 @@ class MenuScreen:
                 draw_rounded_rect(surface, crect, BG_CARD_LOCKED, radius=6,
                                   border=1, border_color=BORDER_COLOR)
                 draw_text(surface, cname, crect.x + 10, crect.centery,
-                          TEXT_DIM, 13, anchor="midleft")
+                          TEXT_DIM, 15, bold=True, anchor="midleft")
                 draw_text(surface, "Soon", crect.right - 10, crect.centery,
-                          TEXT_DIM, 10, anchor="midright")
+                          TEXT_DIM, 11, bold=True, anchor="midright")
             else:
                 bg_c = _lc(BG_CARD, BG_CARD_HOVER, ht)
                 bc_c = _lc(BORDER_COLOR, page_accent,
@@ -358,13 +361,13 @@ class MenuScreen:
                     pygame.draw.rect(surface, _lc(BORDER_COLOR, page_accent, ht),
                                      box_rect, width=1, border_radius=3)
                 draw_text(surface, cname, bx + bs + 10, crect.centery,
-                          TEXT_PRIMARY if checked else TEXT_SECONDARY, 14,
-                          bold=checked, anchor="midleft")
+                          TEXT_PRIMARY if checked else TEXT_SECONDARY, 15,
+                          bold=True, anchor="midleft")
 
         # Match the classic carousel+pills section height so the separator,
         # mode toggle and JOUER button stay at the same Y when toggling modes.
         # Empirical offset measured against the classic layout's ctrl_top.
-        return original_top + 262
+        return original_top + 258
 
     def handle_event(self, event):
         # Pseudo field: consume keyboard events while editing
