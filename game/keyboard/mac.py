@@ -101,6 +101,42 @@ _CAPS_LOCK_VK = 0x39        # kVK_CapsLock — suppressed entirely (Pro Tools
                             # never uses it, and pynput's Darwin backend
                             # crashes on it on macOS Tahoe).
 
+# Modifier VKs → internal modifier names.
+# Mac Command  → 'Ctrl' (Pro Tools mapping)
+# Mac Option   → 'Alt'
+# Mac Control  → 'Win'  (analogue of the Windows Start key)
+# Mac Shift    → 'Shift'
+_MAC_VK_MODIFIERS = {
+    0x37: 'Ctrl',  0x36: 'Ctrl',
+    0x38: 'Shift', 0x3C: 'Shift',
+    0x3A: 'Alt',   0x3D: 'Alt',
+    0x3B: 'Win',   0x3E: 'Win',
+}
+
+# Non-character special keys (everything that isn't a letter/digit/numpad).
+_MAC_VK_SPECIAL = {
+    0x31: 'Space', 0x24: 'Enter', 0x4C: 'Enter',
+    0x30: 'Tab', 0x33: 'Backspace', 0x75: 'Delete', 0x35: 'Escape',
+    0x73: 'Home', 0x77: 'End', 0x74: 'PageUp', 0x79: 'PageDown',
+    0x7B: 'Left', 0x7C: 'Right', 0x7D: 'Down', 0x7E: 'Up',
+    0x7A: 'F1', 0x78: 'F2', 0x63: 'F3', 0x76: 'F4',
+    0x60: 'F5', 0x61: 'F6', 0x62: 'F7', 0x64: 'F8',
+    0x65: 'F9', 0x6D: 'F10', 0x67: 'F11', 0x6F: 'F12',
+}
+
+
+def _vk_to_internal_name(vk):
+    """Map a Mac VK code to our internal key name. None if unknown."""
+    if vk in _MAC_VK_MODIFIERS:
+        return _MAC_VK_MODIFIERS[vk]
+    if vk in _MAC_VK_NUMPAD:
+        return _MAC_VK_NUMPAD[vk]
+    if vk in _MAC_VK_SPECIAL:
+        return _MAC_VK_SPECIAL[vk]
+    if vk in _MAC_VK_TO_QWERTY:
+        return _MAC_VK_TO_QWERTY[vk]
+    return None
+
 
 def name_is_modifier(key):
     return key in MODIFIER_MAP
@@ -160,45 +196,72 @@ def _try_install_cmd_suppression(handler):
                      Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp) | \
                      Quartz.CGEventMaskBit(Quartz.kCGEventFlagsChanged)
 
-        kCmdFlag = Quartz.kCGEventFlagMaskCommand
+        # Maps each modifier VK → the bit mask in CGEvent flags that indicates
+        # whether ANY key of that type is currently held.
+        kCmdFlag   = Quartz.kCGEventFlagMaskCommand
+        kShiftFlag = Quartz.kCGEventFlagMaskShift
+        kAltFlag   = Quartz.kCGEventFlagMaskAlternate
+        kCtrlFlag  = Quartz.kCGEventFlagMaskControl
+        _MOD_NAME_TO_FLAG = {
+            'Ctrl': kCmdFlag,    # internal Ctrl == Mac Cmd
+            'Shift': kShiftFlag,
+            'Alt': kAltFlag,
+            'Win': kCtrlFlag,    # internal Win == Mac Control
+        }
 
         def _callback(proxy, event_type, event, refcon):
             try:
                 vk = Quartz.CGEventGetIntegerValueField(
                     event, Quartz.kCGKeyboardEventKeycode)
+
+                # Always absorb Caps Lock — Pro Tools never uses it, and
+                # leaving it on would change the keyboard LED state.
+                if vk == _CAPS_LOCK_VK:
+                    return None
+
+                name = _vk_to_internal_name(vk)
                 flags = Quartz.CGEventGetFlags(event)
                 cmd_held = bool(flags & kCmdFlag)
 
-                # FlagsChanged: track Cmd press/release ourselves
                 if event_type == Quartz.kCGEventFlagsChanged:
-                    if vk in _CMD_VK_SET:
+                    # Modifier press/release: derive state from the relevant
+                    # flag bit, since flagsChanged doesn't tell us press vs
+                    # release directly.
+                    if name in _MOD_NAME_TO_FLAG:
+                        held = bool(flags & _MOD_NAME_TO_FLAG[name])
                         with handler.lock:
-                            if cmd_held:
-                                handler.pressed_modifiers.add('Ctrl')
+                            if held:
+                                handler.pressed_modifiers.add(name)
                             else:
-                                handler.pressed_modifiers.discard('Ctrl')
-                        return None  # suppress Cmd event from reaching OS
-                    if vk == _CAPS_LOCK_VK:
-                        return None  # absorb Caps Lock — pynput crashes on it
-                    return event  # other modifier — let pynput handle
+                                handler.pressed_modifiers.discard(name)
+                        # Suppress Cmd events so macOS doesn't intercept
+                        # Cmd-shortcuts (Cmd+M minimize, Cmd+H hide, etc.).
+                        if name == 'Ctrl':
+                            return None
+                    return event
 
-                # KeyDown/KeyUp while Cmd is held: inject + suppress
-                if cmd_held and event_type in (Quartz.kCGEventKeyDown,
-                                                Quartz.kCGEventKeyUp):
-                    name = _MAC_VK_NUMPAD.get(vk) or _MAC_VK_TO_QWERTY.get(vk)
-                    if name is not None:
+                if event_type == Quartz.kCGEventKeyDown:
+                    if name is not None and name not in _MOD_NAME_TO_FLAG:
                         with handler.lock:
-                            if event_type == Quartz.kCGEventKeyDown:
-                                handler.pressed_keys.add(name)
-                                combo = frozenset(
-                                    handler.pressed_modifiers | {name})
-                                handler._last_combo = combo
-                                handler._combo_time = time.time()
-                                handler.events.append(
-                                    (time.time(), 'combo', combo))
-                            else:
-                                handler.pressed_keys.discard(name)
-                    return None  # suppress so macOS doesn't run its shortcut
+                            handler.pressed_keys.add(name)
+                            combo = frozenset(
+                                handler.pressed_modifiers | {name})
+                            handler._last_combo = combo
+                            handler._combo_time = time.time()
+                            handler.events.append(
+                                (time.time(), 'combo', combo))
+                    # Suppress when Cmd is held to prevent macOS shortcuts.
+                    if cmd_held:
+                        return None
+                    return event
+
+                if event_type == Quartz.kCGEventKeyUp:
+                    if name is not None and name not in _MOD_NAME_TO_FLAG:
+                        with handler.lock:
+                            handler.pressed_keys.discard(name)
+                    if cmd_held:
+                        return None
+                    return event
             except Exception:
                 pass
             return event
@@ -272,25 +335,19 @@ class KeyboardHandler(BaseKeyboardHandler):
             self._cmd_tap = None
 
     def start(self):
+        """On macOS we no longer use pynput's Listener — its Darwin backend
+        crashes in HIToolbox TSM when constructing an NSEvent for Caps Lock
+        on macOS Tahoe (and uses a listen-only tap, so we can't filter Caps
+        Lock upstream). Instead our CGEventTap below is the SOLE input source
+        for the game: it tracks all modifiers, all key presses, and feeds
+        directly into pressed_modifiers / pressed_keys / events.
+        """
         self._running = True
-        self.listener = keyboard.Listener(
-            on_press=self._on_press,
-            on_release=self._on_release,
-            suppress=False,
-        )
-        self.listener.daemon = True
-        self.listener.start()
+        if self._cmd_tap is None:
+            self._cmd_tap = _try_install_cmd_suppression(self)
 
     def start_win_suppression(self, game_hwnd=None):
-        """Install our CGEventTap AFTER pynput's listener so we sit at the head
-        of the event-tap chain (kCGHeadInsertEventTap prepends, so the LAST
-        head-inserted tap is the FIRST to see events). Otherwise pynput would
-        see Caps Lock first and crash in HIToolbox/libdispatch on macOS Tahoe
-        before our absorber can suppress the event.
-        """
-        # Give pynput's listener thread a moment to register its own tap.
-        # 150ms is overkill but cheap and only happens once at startup.
-        time.sleep(0.15)
+        # Tap is already installed in start(); kept for cross-platform symmetry.
         if self._cmd_tap is None:
             self._cmd_tap = _try_install_cmd_suppression(self)
 
