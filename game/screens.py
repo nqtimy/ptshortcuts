@@ -65,7 +65,7 @@ from game.renderer import (
     draw_text_gradient, draw_gradient_rect, draw_radial_halo, draw_padlock,
     draw_progress_bar, draw_corner_frame,
     ease_out_cubic, lerp_color, lerp_color_stops, frame_lerp,
-    _get_glow_surface,
+    _get_glow_surface, _scale_alpha,
 )
 from game.achievements import ACHIEVEMENTS
 from game.leaderboard import save_local_highscore, submit_score_async
@@ -393,7 +393,10 @@ class MenuScreen:
                           cs_y + int((3 - cs_y) * pop))
                     cs_surf = pygame.Surface((bs, bs), pygame.SRCALPHA)
                     pygame.draw.lines(cs_surf, BG_COLOR, False, [p1, p2, p3], 2)
-                    cs_surf.set_alpha(int(255 * anim_t))
+                    _csa = int(255 * anim_t)
+                    _csov = pygame.Surface((bs, bs), pygame.SRCALPHA)
+                    _csov.fill((255, 255, 255, _csa))
+                    cs_surf.blit(_csov, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                     surface.blit(cs_surf, (bx, by))
                 # Name color follows the toggle progress.
                 text_col = _lc(TEXT_SECONDARY, TEXT_PRIMARY, anim_t)
@@ -868,8 +871,12 @@ class MenuScreen:
             t_norm = elapsed_t / TRANSITION_DUR
             t_eased = 1.0 - (1.0 - t_norm) ** 3  # ease-out cubic
             alpha = max(0, min(255, int(255 * (1.0 - t_eased))))
-            snap = self._transition_fade_snap.copy()
-            snap.set_alpha(alpha)
+            # Use SRCALPHA + BLEND_RGBA_MULT instead of set_alpha — global alpha
+            # on RGB surfaces is unreliable on macOS (SDL2/Cocoa).
+            snap = self._transition_fade_snap.convert_alpha()
+            overlay = pygame.Surface(snap.get_size(), pygame.SRCALPHA)
+            overlay.fill((255, 255, 255, alpha))
+            snap.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             surface.blit(snap, (0, self._panel_snapshot_top))
 
         # ── Bottom Controls ────────────────────────────────────────────────
@@ -899,7 +906,9 @@ class MenuScreen:
             draw_shadow_rect(overlay, pygame.Rect(0, 0, custom_rect.w, custom_rect.h),
                              bg_rv, radius=10, border=1, border_color=bc_rv,
                              shadow_offset=2, shadow_alpha=20)
-            overlay.set_alpha(alpha_rv)
+            _amul = pygame.Surface((custom_rect.w, custom_rect.h), pygame.SRCALPHA)
+            _amul.fill((255, 255, 255, alpha_rv))
+            overlay.blit(_amul, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             surface.blit(overlay, custom_rect.topleft)
 
         # Toggle switch — knob slides smoothly with rmt
@@ -2657,16 +2666,16 @@ class GameScreen:
         tag_col = (*TEXT_DIM, min(255, alpha))
 
         # "SUCCES" label
-        tag_surf = get_font(9, True).render("SUCCES", True, tag_col[:3])
-        tag_surf.set_alpha(alpha)
+        tag_surf = _scale_alpha(
+            get_font(9, True).render("SUCCES", True, tag_col[:3]), alpha)
         notif_surf.blit(tag_surf, (12, 8))
 
-        name_surf = get_font(14, True).render(info['name'], True, name_col[:3])
-        name_surf.set_alpha(alpha)
+        name_surf = _scale_alpha(
+            get_font(14, True).render(info['name'], True, name_col[:3]), alpha)
         notif_surf.blit(name_surf, (12, 20))
 
-        desc_surf = get_font(11, False).render(info['desc'], True, desc_col[:3])
-        desc_surf.set_alpha(alpha)
+        desc_surf = _scale_alpha(
+            get_font(11, False).render(info['desc'], True, desc_col[:3]), alpha)
         notif_surf.blit(desc_surf, (12, 36))
 
         surface.blit(notif_surf, (nx, notif_y))
