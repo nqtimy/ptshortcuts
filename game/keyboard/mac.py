@@ -61,7 +61,7 @@ SPECIAL_KEY_MAP = {
 for _opt_name, _opt_label in (('insert', 'Insert'), ('num_lock', 'NumLock')):
     _opt_key = getattr(Key, _opt_name, None)
     if _opt_key is not None:
-        _KEY_NAMES[_opt_key] = _opt_label
+        SPECIAL_KEY_MAP[_opt_key] = _opt_label
 
 # ---------------------------------------------------------------------------
 # Mac virtual key codes (kVK_ANSI_*) → QWERTY character names
