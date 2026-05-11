@@ -161,6 +161,25 @@ def frame_lerp(k, dt):
 # Surface cache for glow / shadow effects
 # ---------------------------------------------------------------------------
 
+def _scale_alpha(surf, alpha):
+    """Multiply per-pixel alpha by `alpha` (0-255). Returns a new surface.
+
+    `Surface.set_alpha()` interacts unpredictably with per-pixel alpha on macOS
+    (SDL_ttf can produce surfaces where global alpha overrides per-pixel alpha,
+    making rendered text appear as a solid colored bounding box). Multiplying
+    with BLEND_RGBA_MULT is reliable across platforms.
+    """
+    if alpha >= 255:
+        return surf
+    if alpha <= 0:
+        return pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+    out = surf.convert_alpha() if pygame.display.get_init() and pygame.display.get_surface() else surf.copy()
+    overlay = pygame.Surface(out.get_size(), pygame.SRCALPHA)
+    overlay.fill((255, 255, 255, alpha))
+    out.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return out
+
+
 _glow_cache = {}
 
 
@@ -219,8 +238,7 @@ def draw_text(surface, text, x, y, color=TEXT_PRIMARY, size=24, bold=False,
         sc = shadow_color or (0, 0, 0)
         shadow_surf = font.render(text, True, sc)
         shadow_rect = shadow_surf.get_rect(**{anchor: (x + 2, y + 2)})
-        # Apply alpha
-        shadow_surf.set_alpha(120)
+        shadow_surf = _scale_alpha(shadow_surf, 120)
         surface.blit(shadow_surf, shadow_rect)
 
     surface.blit(rendered, rect)
@@ -236,7 +254,7 @@ def draw_text_glow(surface, text, x, y, color, glow_color=None, size=24,
     # Glow layers (3 offset passes)
     for offset in [3, 2, 1]:
         glow_surf = font.render(text, True, gc)
-        glow_surf.set_alpha(glow_alpha // offset)
+        glow_surf = _scale_alpha(glow_surf, glow_alpha // offset)
         for dx, dy in [(-offset, 0), (offset, 0), (0, -offset), (0, offset)]:
             r = glow_surf.get_rect(**{anchor: (x + dx, y + dy)})
             surface.blit(glow_surf, r)
@@ -598,7 +616,7 @@ def draw_text_gradient(surface, text, x, y, stops, size=24, bold=True,
     if glow_color and glow_alpha > 0:
         for offset in (3, 2, 1):
             gs = font.render(text, True, glow_color)
-            gs.set_alpha(glow_alpha // offset)
+            gs = _scale_alpha(gs, glow_alpha // offset)
             for dx, dy in ((-offset, 0), (offset, 0), (0, -offset), (0, offset)):
                 gr = gs.get_rect(**{anchor: (x + dx, y + dy)})
                 surface.blit(gs, gr)
