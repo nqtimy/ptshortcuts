@@ -126,8 +126,12 @@ def key_to_name(key):
 # Cmd suppression via CGEventTap (requires Accessibility permission)
 # ---------------------------------------------------------------------------
 
-def _try_install_cmd_suppression(game_pid, pressed_modifiers, lock):
-    """Attempt to install a CGEventTap that suppresses Cmd key events.
+def _try_install_cmd_suppression(handler):
+    """Install a CGEventTap that suppresses Cmd+key events to prevent macOS
+    from intercepting shortcuts like Cmd+M (minimize), Cmd+H (hide), etc.
+
+    Since suppressing at the head of the event chain also prevents pynput from
+    seeing the event, this callback injects the key into the handler directly.
 
     Silently no-ops if Quartz is unavailable or permission is denied.
     Must be called from the main thread (CGEventTap requires a run loop).
@@ -136,30 +140,56 @@ def _try_install_cmd_suppression(game_pid, pressed_modifiers, lock):
         import Quartz  # pyobjc-framework-Quartz
         import AppKit  # noqa: F401 — needed to start NSRunLoop
 
-        _CMD_MASK = Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown) | \
-                    Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp) | \
-                    Quartz.CGEventMaskBit(Quartz.kCGEventFlagsChanged)
+        event_mask = Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown) | \
+                     Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp) | \
+                     Quartz.CGEventMaskBit(Quartz.kCGEventFlagsChanged)
+
+        kCmdFlag = Quartz.kCGEventFlagMaskCommand
 
         def _callback(proxy, event_type, event, refcon):
-            vk = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGKeyboardEventKeycode)
-            if vk in _CMD_MASK:
-                is_down = event_type in (Quartz.kCGEventKeyDown,
-                                         Quartz.kCGEventFlagsChanged)
-                with lock:
-                    if is_down:
-                        pressed_modifiers.add('Ctrl')
-                    else:
-                        pressed_modifiers.discard('Ctrl')
-                return None  # suppress
+            try:
+                vk = Quartz.CGEventGetIntegerValueField(
+                    event, Quartz.kCGKeyboardEventKeycode)
+                flags = Quartz.CGEventGetFlags(event)
+                cmd_held = bool(flags & kCmdFlag)
 
+                # FlagsChanged: track Cmd press/release ourselves
+                if event_type == Quartz.kCGEventFlagsChanged:
+                    if vk in _CMD_VK_SET:
+                        with handler.lock:
+                            if cmd_held:
+                                handler.pressed_modifiers.add('Ctrl')
+                            else:
+                                handler.pressed_modifiers.discard('Ctrl')
+                        return None  # suppress Cmd event from reaching OS
+                    return event  # other modifier — let pynput handle
+
+                # KeyDown/KeyUp while Cmd is held: inject + suppress
+                if cmd_held and event_type in (Quartz.kCGEventKeyDown,
+                                                Quartz.kCGEventKeyUp):
+                    name = _MAC_VK_NUMPAD.get(vk) or _MAC_VK_TO_QWERTY.get(vk)
+                    if name is not None:
+                        with handler.lock:
+                            if event_type == Quartz.kCGEventKeyDown:
+                                handler.pressed_keys.add(name)
+                                combo = frozenset(
+                                    handler.pressed_modifiers | {name})
+                                handler._last_combo = combo
+                                handler._combo_time = time.time()
+                                handler.events.append(
+                                    (time.time(), 'combo', combo))
+                            else:
+                                handler.pressed_keys.discard(name)
+                    return None  # suppress so macOS doesn't run its shortcut
+            except Exception:
+                pass
             return event
 
         tap = Quartz.CGEventTapCreate(
             Quartz.kCGSessionEventTap,
             Quartz.kCGHeadInsertEventTap,
             Quartz.kCGEventTapOptionDefault,
-            _CMD_MASK,
+            event_mask,
             _callback,
             None,
         )
@@ -193,8 +223,7 @@ class KeyboardHandler(BaseKeyboardHandler):
 
     def start_win_suppression(self, game_hwnd=None):
         """Install CGEventTap for Cmd key suppression (no-op if unavailable)."""
-        self._cmd_tap = _try_install_cmd_suppression(
-            None, self.pressed_modifiers, self.lock)
+        self._cmd_tap = _try_install_cmd_suppression(self)
 
     def stop_win_suppression(self):
         if self._cmd_tap is not None:
