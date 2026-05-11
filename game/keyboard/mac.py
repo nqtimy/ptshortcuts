@@ -97,6 +97,9 @@ _MAC_VK_NUMPAD = {
 
 # Cmd VK codes (for suppression)
 _CMD_VK_SET = {0x37, 0x36}  # kVK_Command, kVK_RightCommand
+_CAPS_LOCK_VK = 0x39        # kVK_CapsLock — suppressed entirely (Pro Tools
+                            # never uses it, and pynput's Darwin backend
+                            # crashes on it on macOS Tahoe).
 
 
 def name_is_modifier(key):
@@ -175,6 +178,8 @@ def _try_install_cmd_suppression(handler):
                             else:
                                 handler.pressed_modifiers.discard('Ctrl')
                         return None  # suppress Cmd event from reaching OS
+                    if vk == _CAPS_LOCK_VK:
+                        return None  # absorb Caps Lock — pynput crashes on it
                     return event  # other modifier — let pynput handle
 
                 # KeyDown/KeyUp while Cmd is held: inject + suppress
