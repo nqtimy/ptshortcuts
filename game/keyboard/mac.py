@@ -145,6 +145,13 @@ def _try_install_cmd_suppression(handler):
         return None
 
     try:
+        # Diagnostic: report trust status
+        try:
+            trusted = Quartz.AXIsProcessTrusted()
+            print(f"[PTShortcuts] AXIsProcessTrusted = {trusted}",
+                  file=sys.stderr, flush=True)
+        except Exception:
+            pass
 
         event_mask = Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown) | \
                      Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp) | \
@@ -191,18 +198,37 @@ def _try_install_cmd_suppression(handler):
                 pass
             return event
 
-        tap = Quartz.CGEventTapCreate(
-            Quartz.kCGSessionEventTap,
-            Quartz.kCGHeadInsertEventTap,
-            Quartz.kCGEventTapOptionDefault,
-            event_mask,
-            _callback,
-            None,
-        )
+        # Try tap locations in order: session is best, but on macOS 26+ with
+        # ad-hoc signed apps it sometimes refuses; annotated-session is a
+        # softer alternative that doesn't require the same entitlement.
+        tap = None
+        for tap_loc, tap_name in (
+            (Quartz.kCGSessionEventTap, 'session'),
+            (Quartz.kCGAnnotatedSessionEventTap, 'annotated-session'),
+        ):
+            try:
+                tap = Quartz.CGEventTapCreate(
+                    tap_loc,
+                    Quartz.kCGHeadInsertEventTap,
+                    Quartz.kCGEventTapOptionDefault,
+                    event_mask,
+                    _callback,
+                    None,
+                )
+            except Exception as e:
+                print(f"[PTShortcuts] CGEventTapCreate({tap_name}) raised: {e}",
+                      file=sys.stderr, flush=True)
+                tap = None
+            if tap is not None:
+                print(f"[PTShortcuts] CGEventTap installed at {tap_name}.",
+                      file=sys.stderr, flush=True)
+                break
+            print(f"[PTShortcuts] CGEventTapCreate({tap_name}) returned None.",
+                  file=sys.stderr, flush=True)
         if tap is None:
-            print("[PTShortcuts] CGEventTapCreate returned None — "
-                  "Accessibility permission likely missing or app needs restart "
-                  "after permission was granted.",
+            print("[PTShortcuts] All tap locations failed. Either Accessibility "
+                  "permission is missing (after rebuild it must be re-granted) "
+                  "or the ad-hoc-signed binary is denied on macOS 26+.",
                   file=sys.stderr, flush=True)
             return None
 
@@ -210,8 +236,6 @@ def _try_install_cmd_suppression(handler):
         Quartz.CFRunLoopAddSource(
             Quartz.CFRunLoopGetCurrent(), src, Quartz.kCFRunLoopCommonModes)
         Quartz.CGEventTapEnable(tap, True)
-        print("[PTShortcuts] Cmd suppression CGEventTap installed.",
-              file=sys.stderr, flush=True)
         return tap
     except Exception as e:
         print(f"[PTShortcuts] CGEventTap install failed: {e}",
