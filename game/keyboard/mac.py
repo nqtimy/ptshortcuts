@@ -54,10 +54,14 @@ SPECIAL_KEY_MAP = {
     Key.end:        'End',
     Key.page_up:    'PageUp',
     Key.page_down:  'PageDown',
-    Key.insert:     'Insert',
-    Key.num_lock:   'NumLock',
     Key.caps_lock:  'CapsLock',
 }
+
+# Mac keyboards may not expose Insert / NumLock — add only if pynput defines them
+for _opt_name, _opt_label in (('insert', 'Insert'), ('num_lock', 'NumLock')):
+    _opt_key = getattr(Key, _opt_name, None)
+    if _opt_key is not None:
+        _KEY_NAMES[_opt_key] = _opt_label
 
 # ---------------------------------------------------------------------------
 # Mac virtual key codes (kVK_ANSI_*) → QWERTY character names
