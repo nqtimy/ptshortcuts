@@ -2852,6 +2852,7 @@ class StatsScreen:
 
     _SORT_MODES = [('rate', 'Par taux'), ('views', 'Par vues'), ('name', 'Par nom')]
     _ROW_H = 62
+    _LESSON_H = 36   # lesson header row height
     _HEADER_H = 172  # pixels reserved above the scrollable list
 
     def __init__(self, certifications, initial_cert=None):
@@ -2870,10 +2871,14 @@ class StatsScreen:
         self.stats = load_stats(self.cert_name)  # {command_name: {views, correct, total_time}}
         self._sort_mode = 'rate'
         self._rows = []          # sorted shortcuts (full list)
-        self._display_rows = []  # filtered by search query
+        # _display_rows: list of {'type': 'header'|'item', 'cat': str, 'sc': dict|None,
+        #                         'y': int, 'h': int}
+        self._display_rows = []
+        self._total_height = 0
         self._scroll_y = 0.0
         self._scroll_target = 0.0
         self._sort_btn_rects = {}
+        self._header_rects = {}  # {cat_name: pygame.Rect} for click hit testing
         self._back_rect = None
         self._cert_left_rect = None
         self._cert_right_rect = None
@@ -2882,6 +2887,8 @@ class StatsScreen:
         self._search_query = ''
         self._search_active = False
         self._search_rect = None
+        # Collapse state: {cert_name: set of collapsed category names}
+        self._collapsed = {}
         self._build_rows()
 
     def _change_cert(self, direction):
@@ -2943,7 +2950,7 @@ class StatsScreen:
         return rect
 
     def _build_rows(self):
-        """Build and sort the row list according to current sort mode."""
+        """Sort shortcuts within each lesson according to current sort mode."""
         all_sc = self.cert_data.get('all_shortcuts', [])
 
         def _entry(sc):
@@ -2957,20 +2964,22 @@ class StatsScreen:
             return e['correct'] / e['views']
 
         if self._sort_mode == 'rate':
-            self._rows = sorted(all_sc, key=_rate)   # worst first
+            sort_key = _rate
+            reverse = False
         elif self._sort_mode == 'views':
-            self._rows = sorted(all_sc, key=lambda s: _entry(s)['views'], reverse=True)
+            sort_key = lambda s: _entry(s)['views']
+            reverse = True
         else:
-            self._rows = sorted(all_sc, key=lambda s: s.get('command_name', '').lower())
+            sort_key = lambda s: s.get('command_name', '').lower()
+            reverse = False
+        self._rows = sorted(all_sc, key=sort_key, reverse=reverse)
         self._apply_filter()
 
     def _apply_filter(self):
-        """Recompute _display_rows from _rows + current search query."""
+        """Recompute grouped _display_rows from _rows + search + collapse state."""
         q = self._search_query.lower().strip()
-        if not q:
-            self._display_rows = self._rows
-        else:
-            self._display_rows = [
+        if q:
+            base = [
                 sc for sc in self._rows
                 if (q in (sc.get('command_name') or '').lower() or
                     q in (sc.get('context') or '').lower() or
@@ -2978,12 +2987,48 @@ class StatsScreen:
                     q in self._fmt_keys(sc, 'keys_win').lower() or
                     q in self._fmt_keys(sc, 'keys_mac').lower())
             ]
+        else:
+            base = list(self._rows)
+
+        # Group by category, preserving the order from category_names
+        cats_order = list(self.cert_data.get('category_names', []))
+        # Stragglers (shortcuts whose category isn't in category_names): append at end
+        seen_cats = set(cats_order)
+        for sc in base:
+            c = sc.get('category')
+            if c and c not in seen_cats:
+                cats_order.append(c)
+                seen_cats.add(c)
+
+        by_cat = {}
+        for sc in base:
+            by_cat.setdefault(sc.get('category') or '', []).append(sc)
+
+        collapsed = self._collapsed.setdefault(self.cert_name, set())
+
+        rows = []
+        y = 0
+        for cat in cats_order:
+            items = by_cat.get(cat, [])
+            if not items:
+                continue
+            rows.append({'type': 'header', 'cat': cat, 'sc': None,
+                         'count': len(items), 'y': y, 'h': self._LESSON_H})
+            y += self._LESSON_H
+            if cat in collapsed:
+                continue
+            for sc in items:
+                rows.append({'type': 'item', 'cat': cat, 'sc': sc,
+                             'y': y, 'h': self._ROW_H})
+                y += self._ROW_H
+
+        self._display_rows = rows
+        self._total_height = y
         self._scroll_target = 0.0
 
     def _clamp_scroll(self, h):
         viewport_h = h - self._HEADER_H - 20
-        total_h = len(self._display_rows) * self._ROW_H
-        max_scroll = max(0, total_h - viewport_h)
+        max_scroll = max(0, self._total_height - viewport_h)
         self._scroll_target = max(0.0, min(float(max_scroll), self._scroll_target))
 
     def handle_event(self, event):
@@ -3032,11 +3077,24 @@ class StatsScreen:
             elif self._cert_right_rect and self._cert_right_rect.collidepoint(pos):
                 self._change_cert(1)
             else:
+                handled = False
                 for mode, rect in self._sort_btn_rects.items():
                     if rect.collidepoint(pos):
                         self._sort_mode = mode
                         self._build_rows()
+                        handled = True
                         break
+                if not handled:
+                    # Lesson header toggle
+                    for cat, hr in self._header_rects.items():
+                        if hr.collidepoint(pos):
+                            collapsed = self._collapsed.setdefault(self.cert_name, set())
+                            if cat in collapsed:
+                                collapsed.discard(cat)
+                            else:
+                                collapsed.add(cat)
+                            self._apply_filter()
+                            break
         return None
 
     def draw(self, surface, dt=0.016):
@@ -3093,9 +3151,9 @@ class StatsScreen:
         total_views = sum(e.get('views', 0) for e in self.stats.values())
         total_correct = sum(e.get('correct', 0) for e in self.stats.values())
         global_rate = int(total_correct / total_views * 100) if total_views > 0 else 0
-        filtered_count = len(self._display_rows)
-        if self._search_query and filtered_count != total:
-            summary = (f"{filtered_count}/{total} raccourcis   "
+        item_count = sum(1 for r in self._display_rows if r['type'] == 'item')
+        if self._search_query and item_count != total:
+            summary = (f"{item_count}/{total} raccourcis   "
                        f"Taux global: {global_rate}%   "
                        f"Reponses: {total_correct}/{total_views}")
         else:
@@ -3188,13 +3246,19 @@ class StatsScreen:
         surface.set_clip(clip_rect)
 
         scroll_int = int(self._scroll_y)
-        for i, sc in enumerate(self._display_rows):
-            row_y = list_top + i * self._ROW_H - scroll_int
-            if row_y + self._ROW_H < list_top:
+        self._header_rects = {}
+        for entry in self._display_rows:
+            row_y = list_top + entry['y'] - scroll_int
+            if row_y + entry['h'] < list_top:
                 continue
             if row_y > list_top + viewport_h:
                 break
-            self._draw_row(surface, sc, row_y, w, mouse, col_x)
+            if entry['type'] == 'header':
+                hr = pygame.Rect(8, row_y, w - 16, entry['h'] - 2)
+                self._header_rects[entry['cat']] = hr
+                self._draw_lesson_header(surface, entry, row_y, w, mouse)
+            else:
+                self._draw_row(surface, entry['sc'], row_y, w, mouse, col_x)
 
         # Empty state when search yields no results
         if not self._display_rows and self._search_query:
@@ -3204,15 +3268,52 @@ class StatsScreen:
         surface.set_clip(old_clip)
 
         # Scroll indicator
-        if len(self._display_rows) * self._ROW_H > viewport_h:
-            total_h = len(self._display_rows) * self._ROW_H
-            bar_h = max(30, int(viewport_h * viewport_h / total_h))
-            bar_y = list_top + int(self._scroll_y / max(1, total_h - viewport_h)
+        if self._total_height > viewport_h:
+            bar_h = max(30, int(viewport_h * viewport_h / self._total_height))
+            bar_y = list_top + int(self._scroll_y / max(1, self._total_height - viewport_h)
                                    * (viewport_h - bar_h))
             pygame.draw.rect(surface, BORDER_COLOR,
                              pygame.Rect(w - 6, bar_y, 4, bar_h), border_radius=2)
 
         draw_vignette(surface, 0.15)
+
+    def _draw_lesson_header(self, surface, entry, row_y, w, mouse):
+        """Draw a clickable lesson section header with a chevron toggle."""
+        hr = pygame.Rect(8, row_y, w - 16, entry['h'] - 2)
+        collapsed_set = self._collapsed.get(self.cert_name, set())
+        is_collapsed = entry['cat'] in collapsed_set
+        hov = hr.collidepoint(mouse)
+
+        # Subtle band background that brightens on hover
+        bg = _lc(BG_CARD, BG_CARD_HOVER, 0.5 if hov else 0.0)
+        pygame.draw.rect(surface, bg, hr, border_radius=6)
+        # Left accent bar (4px) — softer when collapsed
+        accent_col = ACCENT_BLUE if not is_collapsed else _lc(ACCENT_BLUE, BORDER_COLOR, 0.5)
+        pygame.draw.rect(surface, accent_col,
+                         pygame.Rect(hr.x + 1, hr.y + 6, 3, hr.h - 12),
+                         border_radius=2)
+        # Chevron on the right: pointing down (expanded) or right (collapsed)
+        ch_cx = hr.right - 22
+        ch_cy = hr.centery
+        ch_size = 5
+        ch_col = _lc(TEXT_SECONDARY, TEXT_PRIMARY, 0.5 if hov else 0.0)
+        if is_collapsed:
+            pts = [(ch_cx - ch_size // 2, ch_cy - ch_size),
+                   (ch_cx + ch_size // 2 + 1, ch_cy),
+                   (ch_cx - ch_size // 2, ch_cy + ch_size)]
+        else:
+            pts = [(ch_cx - ch_size, ch_cy - ch_size // 2),
+                   (ch_cx, ch_cy + ch_size // 2 + 1),
+                   (ch_cx + ch_size, ch_cy - ch_size // 2)]
+        pygame.draw.polygon(surface, ch_col, pts)
+
+        # Label + count
+        cat_label = entry['cat'] or '(sans catégorie)'
+        draw_text(surface, cat_label, hr.x + 14, hr.centery,
+                  TEXT_PRIMARY, 13, bold=True, anchor="midleft")
+        count_str = f"{entry['count']} raccourcis"
+        draw_text(surface, count_str, ch_cx - 14, hr.centery,
+                  TEXT_DIM, 10, anchor="midright")
 
     def _col_positions(self, w):
         return {
