@@ -80,7 +80,6 @@ jobs:
           EXTRA=""
           [ -f supabase_config.json ] && EXTRA='--add-data "supabase_config.json:."'
           eval python -m PyInstaller \
-            --onefile \
             --windowed \
             --name PTShortcuts \
             --add-data "shortcuts:shortcuts" \
@@ -91,10 +90,11 @@ jobs:
             --collect-all "pynput" \
             main.py
 
-      - name: Zip binary
+      - name: Codesign (ad-hoc) and zip .app
         run: |
+          codesign --force --deep --sign - dist/PTShortcuts.app || true
           cd dist
-          zip -r PTShortcuts-mac.zip PTShortcuts
+          ditto -c -k --sequesterRsrc --keepParent PTShortcuts.app PTShortcuts-mac.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

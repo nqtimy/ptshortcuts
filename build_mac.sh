@@ -19,7 +19,6 @@ if [ -f "supabase_config.json" ]; then
 fi
 
 eval python -m PyInstaller \
-    --onefile \
     --windowed \
     --name "$APP_NAME" \
     --add-data "shortcuts:shortcuts" \
@@ -31,12 +30,23 @@ eval python -m PyInstaller \
     --collect-all "pynput" \
     main.py
 
+# Ad-hoc codesign so Finder launches the app without Terminal
+codesign --force --deep --sign - "$DIST_DIR/$APP_NAME.app" 2>/dev/null || true
+
+# Zip the .app for distribution (preserves bundle structure + perms)
+ZIP_PATH="$DIST_DIR/$APP_NAME.app.zip"
+rm -f "$ZIP_PATH"
+( cd "$DIST_DIR" && ditto -c -k --sequesterRsrc --keepParent "$APP_NAME.app" "$APP_NAME.app.zip" )
+
 echo ""
 echo "=== Build complete ==="
-echo "Output: $DIST_DIR/$APP_NAME"
+echo "App bundle : $DIST_DIR/$APP_NAME.app"
+echo "Zip        : $ZIP_PATH"
 echo ""
-echo "NOTE: To run without Terminal, codesign the binary:"
-echo "  codesign --force --deep --sign - dist/$APP_NAME"
+echo "Distribution :"
+echo "  1. Envoyer $APP_NAME.app.zip aux utilisateurs"
+echo "  2. Dézipper, glisser $APP_NAME.app dans /Applications"
+echo "  3. Premier lancement : clic-droit sur l'app → Ouvrir (Gatekeeper)"
 echo ""
-echo "Accessibility permission (for Cmd key suppression):"
-echo "  System Settings → Privacy & Security → Accessibility → add PTShortcuts"
+echo "Accessibility permission (suppression touche Cmd) :"
+echo "  Réglages Système → Confidentialité et sécurité → Accessibilité → ajouter $APP_NAME"
