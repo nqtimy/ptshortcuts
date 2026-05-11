@@ -156,6 +156,7 @@ def main():
                             custom_bonus=menu.selected_bonus,
                             custom_show_answer=menu.selected_show_answer,
                             custom_random=menu.selected_random,
+                            no_numpad=menu.no_numpad,
                         )
                         current_screen = 'game'
                         kbd.clear()
@@ -167,6 +168,7 @@ def main():
                             max_difficulty=max_diff,
                             custom_mode=False,
                             timer_enabled=True,
+                            no_numpad=menu.no_numpad,
                         )
                         current_screen = 'game'
                         kbd.clear()

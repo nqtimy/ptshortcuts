@@ -291,6 +291,44 @@ def load_certifications():
     return certifications
 
 
+_NUMPAD_KEY_NAMES = (
+    {f'Num{i}' for i in range(10)} | {'Num.', 'Num/', 'Num*', 'Num+', 'Num-'}
+)
+
+
+def _combo_has_numpad(combo):
+    return any(k in _NUMPAD_KEY_NAMES for k in combo)
+
+
+def _detect_needs_numpad(detect):
+    """True iff this detection path can only be satisfied with numpad keys."""
+    itype = detect.get('_detect_input_type', 'key_combo')
+    if itype == 'key_sequence':
+        for step in detect.get('_detect_steps', []):
+            opts = step.get('_detect_key_options', [])
+            if opts and all(_combo_has_numpad(o) for o in opts):
+                return True
+        return False
+    opts = detect.get('_detect_key_options', [])
+    if not opts:
+        return False
+    return all(_combo_has_numpad(o) for o in opts)
+
+
+def shortcut_requires_numpad(sc):
+    """True if the shortcut is unplayable without numpad keys.
+
+    The main path AND every alt path must require numpad. If any path is
+    numpad-free the shortcut stays playable (user uses the non-numpad variant).
+    """
+    if not _detect_needs_numpad(sc):
+        return False
+    for alt in sc.get('_detect_alt', []):
+        if not _detect_needs_numpad(alt):
+            return False
+    return True
+
+
 def get_shortcuts_for_categories(cert_data, unlocked_categories):
     """Get shortcuts only from unlocked categories."""
     return [s for s in cert_data['all_shortcuts'] if s['category'] in unlocked_categories]

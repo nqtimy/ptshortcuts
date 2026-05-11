@@ -325,6 +325,16 @@ def load_stats(cert_name):
 
 def save_pseudo(pseudo):
     """Persist the player pseudo into save.json (atomic write)."""
+    save_setting('_pseudo', pseudo)
+
+
+def load_setting(key, default=None):
+    """Read a top-level setting from save.json."""
+    return load_game().get(key, default)
+
+
+def save_setting(key, value):
+    """Persist a top-level setting into save.json (atomic write)."""
     path = get_save_path()
     tmp_path = path + '.tmp'
     try:
@@ -333,7 +343,7 @@ def save_pseudo(pseudo):
                 data = json.load(f)
         except (json.JSONDecodeError, OSError):
             data = {}
-        data['_pseudo'] = pseudo
+        data[key] = value
         with open(tmp_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         os.replace(tmp_path, path)

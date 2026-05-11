@@ -51,7 +51,10 @@ def _to_azerty_display_seq(steps):
         return steps
     return [_to_azerty_display(step) for step in steps]
 
-from game.loader import get_shortcuts_for_categories, get_weighted_shortcuts
+from game.loader import (
+    get_shortcuts_for_categories, get_weighted_shortcuts,
+    shortcut_requires_numpad,
+)
 from game.particles import (
     ScorePopup, RingParticle, spawn_explosion, spawn_sparks,
     spawn_firework_ring, spawn_embers, spawn_wrong_burst,
@@ -70,7 +73,8 @@ from game.renderer import (
 from game.achievements import ACHIEVEMENTS
 from game.leaderboard import save_local_highscore, submit_score_async
 from game.state import (GameState, load_game, save_game, load_pseudo, save_pseudo,
-                        reset_all_data, load_stats, load_achievements, save_achievements)
+                        reset_all_data, load_stats, load_achievements, save_achievements,
+                        load_setting, save_setting)
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +198,11 @@ class MenuScreen:
         self._reset_hover_t = 0.0
         self._reset_yes_hover_t = 0.0
         self._reset_no_hover_t = 0.0
+
+        # "Sans pavé numérique" toggle (filter shortcuts unplayable w/o numpad)
+        self.no_numpad = bool(load_setting('_no_numpad', False))
+        self._numpad_btn_rect = None
+        self._numpad_hover_t = 0.0
 
         # Default custom checklist: first playable cert (or none).
         if self._playable_certs:
@@ -451,6 +460,10 @@ class MenuScreen:
                     # fall through to other handlers
             elif self._reset_btn_rect and self._reset_btn_rect.collidepoint(pos):
                 self._reset_confirm = True
+                return
+            elif self._numpad_btn_rect and self._numpad_btn_rect.collidepoint(pos):
+                self.no_numpad = not self.no_numpad
+                save_setting('_no_numpad', self.no_numpad)
                 return
 
             # Custom-mode option toggles + cert checklist (only active when custom_mode is on).
@@ -1033,6 +1046,33 @@ class MenuScreen:
         draw_text(surface, "ALP", alp_rect.centerx, alp_rect.centery,
                   _lc(alp_color, BG_COLOR, aht), 12, bold=True, anchor="center")
 
+        # ── "Sans pavé num." toggle (above the reset link) ────────────────
+        np_w = 160
+        np_h = 16
+        np_x = margin
+        np_y = vibe_y - 18 - 6 - np_h - 4
+        np_rect = pygame.Rect(np_x, np_y, np_w, np_h)
+        self._numpad_btn_rect = np_rect
+        is_hov_np = np_rect.collidepoint(mouse)
+        self._numpad_hover_t += ((1.0 if is_hov_np else 0.0)
+                                 - self._numpad_hover_t) * _lf(0.14, dt)
+        # Small square indicator + label
+        box_sz = 10
+        box_y = np_rect.centery - box_sz // 2
+        box_rect = pygame.Rect(np_x, box_y, box_sz, box_sz)
+        box_col = page_accent if self.no_numpad else _lc(BORDER_COLOR, page_accent,
+                                                          self._numpad_hover_t)
+        pygame.draw.rect(surface, box_col, box_rect, width=1, border_radius=2)
+        if self.no_numpad:
+            inner = box_rect.inflate(-4, -4)
+            pygame.draw.rect(surface, page_accent, inner, border_radius=1)
+        label_col = _lc(TEXT_DIM, TEXT_SECONDARY,
+                        max(self._numpad_hover_t,
+                            1.0 if self.no_numpad else 0.0))
+        draw_text(surface, "Sans pavé numérique",
+                  np_x + box_sz + 8, np_rect.centery,
+                  label_col, 10, anchor="midleft")
+
         # ── Reset button (small link above pseudo field) ──────────────────
         reset_w = 160
         reset_h = 18
@@ -1195,7 +1235,8 @@ class GameScreen:
 
     def __init__(self, cert_name, cert_data, kbd_handler, max_difficulty=3,
                  custom_mode=False, timer_enabled=True,
-                 custom_bonus=False, custom_show_answer=False, custom_random=True):
+                 custom_bonus=False, custom_show_answer=False, custom_random=True,
+                 no_numpad=False):
         self.cert_name = cert_name
         self.cert_data = cert_data
         self.kbd = kbd_handler
@@ -1206,6 +1247,7 @@ class GameScreen:
         self.custom_bonus = custom_bonus
         self.custom_show_answer = custom_show_answer
         self.custom_random = custom_random
+        self.no_numpad = no_numpad
         # Whether the upgrades/bonus panel + action buttons are visible.
         # Classic mode: always shown. Custom mode: only when bonus is enabled.
         self._show_bonus_panel = (not custom_mode) or custom_bonus
@@ -1308,6 +1350,8 @@ class GameScreen:
         """
         all_sc = self.cert_data.get('all_shortcuts', [])
         playlist = [s for s in all_sc if s.get('difficulty', 1) <= self.max_difficulty]
+        if self.no_numpad:
+            playlist = [s for s in playlist if not shortcut_requires_numpad(s)]
         if self.custom_random:
             random.shuffle(playlist)
         else:
@@ -1338,6 +1382,8 @@ class GameScreen:
             return
 
         shortcuts = get_shortcuts_for_categories(self.cert_data, self.state.unlocked_categories)
+        if self.no_numpad:
+            shortcuts = [s for s in shortcuts if not shortcut_requires_numpad(s)]
         if not shortcuts:
             return
         filtered, weights = get_weighted_shortcuts(shortcuts, self.max_difficulty,
