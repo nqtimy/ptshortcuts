@@ -65,7 +65,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install pygame-ce pynput pyinstaller
-          python -m pip install pyobjc-framework-Quartz || echo "Quartz optional, skipping"
+          python -m pip install pyobjc-framework-Cocoa pyobjc-framework-Quartz
 
       - name: Write Supabase config
         if: ${{ env.SUPABASE_URL != '' }}
@@ -87,7 +87,12 @@ jobs:
             $EXTRA \
             --hidden-import "pynput.keyboard._darwin" \
             --hidden-import "pynput.mouse._darwin" \
+            --hidden-import "Quartz" \
+            --hidden-import "AppKit" \
             --collect-all "pynput" \
+            --collect-all "Quartz" \
+            --collect-all "AppKit" \
+            --collect-all "objc" \
             main.py
 
       - name: Codesign (ad-hoc) and zip .app

@@ -139,6 +139,12 @@ def _try_install_cmd_suppression(handler):
     try:
         import Quartz  # pyobjc-framework-Quartz
         import AppKit  # noqa: F401 — needed to start NSRunLoop
+    except ImportError as e:
+        print(f"[PTShortcuts] CGEventTap suppression unavailable: {e}",
+              file=sys.stderr, flush=True)
+        return None
+
+    try:
 
         event_mask = Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown) | \
                      Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp) | \
@@ -194,14 +200,22 @@ def _try_install_cmd_suppression(handler):
             None,
         )
         if tap is None:
+            print("[PTShortcuts] CGEventTapCreate returned None — "
+                  "Accessibility permission likely missing or app needs restart "
+                  "after permission was granted.",
+                  file=sys.stderr, flush=True)
             return None
 
         src = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
         Quartz.CFRunLoopAddSource(
             Quartz.CFRunLoopGetCurrent(), src, Quartz.kCFRunLoopCommonModes)
         Quartz.CGEventTapEnable(tap, True)
+        print("[PTShortcuts] Cmd suppression CGEventTap installed.",
+              file=sys.stderr, flush=True)
         return tap
-    except Exception:
+    except Exception as e:
+        print(f"[PTShortcuts] CGEventTap install failed: {e}",
+              file=sys.stderr, flush=True)
         return None
 
 
