@@ -262,12 +262,6 @@ class KeyboardHandler(BaseKeyboardHandler):
         self._combo_time = 0.0
         self._cmd_tap = None
 
-    # start_win_suppression / stop_win_suppression: best-effort on Mac
-
-    def start_win_suppression(self, game_hwnd=None):
-        """Install CGEventTap for Cmd key suppression (no-op if unavailable)."""
-        self._cmd_tap = _try_install_cmd_suppression(self)
-
     def stop_win_suppression(self):
         if self._cmd_tap is not None:
             try:
@@ -279,6 +273,11 @@ class KeyboardHandler(BaseKeyboardHandler):
 
     def start(self):
         self._running = True
+        # Install our CGEventTap FIRST so it's earlier in the head-insert chain
+        # than pynput's tap. Otherwise pynput sees Caps Lock first and crashes
+        # in libdispatch on macOS Tahoe before we can absorb the event.
+        if self._cmd_tap is None:
+            self._cmd_tap = _try_install_cmd_suppression(self)
         self.listener = keyboard.Listener(
             on_press=self._on_press,
             on_release=self._on_release,
@@ -286,6 +285,12 @@ class KeyboardHandler(BaseKeyboardHandler):
         )
         self.listener.daemon = True
         self.listener.start()
+
+    def start_win_suppression(self, game_hwnd=None):
+        # Kept for cross-platform API symmetry; the tap is now installed in
+        # start() to ensure it precedes pynput's listener tap.
+        if self._cmd_tap is None:
+            self._cmd_tap = _try_install_cmd_suppression(self)
 
     def stop(self):
         self._running = False
