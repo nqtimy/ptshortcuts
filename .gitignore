@@ -1,20 +1,44 @@
-# Build artifacts
+# --- Build artifacts ---
 build/
-dist/*.exe
-dist/save.json
+dist/
 *.spec
+*.app/
+*.dmg
+*.zip
 
-# Python cache
+# --- Python ---
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+env/
 
-# Save data local
+# --- Local save data ---
 save.json
 
-# Secrets
+# --- Secrets ---
 supabase_config.json
+.env
+.env.local
+*.pem
+*.key
 
-# IDE
+# --- Claude Code ---
+.claude/settings.local.json
+.claude/worktrees/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editor ---
 .vscode/
 .idea/
+*.swp
+*~
