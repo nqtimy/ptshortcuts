@@ -6,8 +6,10 @@ Cible principale : postes Mac partagés d'une école audio (AZERTY ou QWERTY sel
 Organisé par modules de certification (101, 110, 130, 201, 210M, 210P, 205D, 210D).
 
 ## Stack
-- Python 3.12 (CI/CD) / 3.14 (dev local), pygame-ce (pas pygame classique), pynput
-- PyInstaller pour build standalone (.exe Windows / binaire Mac)
+- Python 3.12 (CI/CD) / 3.14 (dev local), pygame-ce (pas pygame classique)
+- Windows : pynput pour la capture clavier globale
+- macOS : CGEventTap Quartz exclusivement (pynput inutilisé — son backend Darwin crashe sur Caps Lock dans HIToolbox TSM sur macOS Tahoe)
+- PyInstaller pour build standalone (.exe Windows / .app bundle Mac)
 - Supabase (REST via urllib, pas de SDK externe) pour le leaderboard en ligne
 - Pas de framework UI externe, tout est rendu via pygame
 
@@ -22,7 +24,7 @@ game/
     __init__.py      → Dispatch plateforme (win32 → win.py, darwin → mac.py)
     base.py          → BaseKeyboardHandler (ABC) — interface commune
     win.py           → Windows : pynput + hook Win32 (scan codes AZERTY→QWERTY)
-    mac.py           → macOS : pynput + CGEventTap Quartz (Cmd suppression)
+    mac.py           → macOS : CGEventTap Quartz (gère TOUS les events, sans pynput)
   achievements.py    → 14 achievements, détection + save/load
   leaderboard.py     → Highscore local + Supabase REST async (offline-first)
   particles.py       → Système de particules et popups flottants
@@ -174,12 +176,27 @@ Pour les touches OEM (=, -, /, etc.) non couvertes par la table de scan codes, l
 
 Sur Mac, `keyboard/mac.py` utilise les **VK codes** (kVK_ANSI_*) via `_MAC_VK_TO_QWERTY` pour le même résultat indépendant du layout.
 
-## Suppression touche Win (Windows) / Cmd (Mac)
-**Windows** : hook `WH_KEYBOARD_LL` séparé de pynput (`SetWindowsHookExW` via ctypes) intercepte la touche Win avant l'OS. Quand la fenêtre est au premier plan : Win supprimée, état géré dans `pressed_modifiers`. `Win+L` impossible à bloquer (kernel).
-
-**Mac** : `CGEventTap` via `pyobjc-framework-Quartz` supprime les events Cmd. Nécessite permission Accessibilité (Réglages Système → Confidentialité → Accessibilité). Si refusée, fallback silencieux (jeu fonctionnel, Cmd+H/Q restent actifs).
+## Capture clavier et suppression touche Win (Windows) / Cmd (Mac)
+**Windows** : pynput pour la capture standard + hook `WH_KEYBOARD_LL` séparé (`SetWindowsHookExW` via ctypes) qui intercepte la touche Win avant l'OS. Quand la fenêtre est au premier plan : Win supprimée, état géré dans `pressed_modifiers`. `Win+L` impossible à bloquer (kernel).
 
 Ne pas modifier la logique Win32 sans bien comprendre les types ctypes 64-bit (`WINFUNCTYPE`, `HMODULE`, `HHOOK`, cast `c_void_p`).
+
+**Mac** : **pas de pynput**. Notre `CGEventTap` (via `pyobjc-framework-Quartz`) est la SEULE source d'input. Il gère :
+- Modificateurs (Cmd, Shift, Option, Control) via les flag bits `kCGEventFlagMask*`
+- Toutes les touches (lettres/digits/numpad/F-keys/flèches) via les VK codes Mac (kVK_ANSI_*)
+- Suppression des events Cmd pour bloquer les raccourcis macOS (Cmd+M minimize, Cmd+H hide, Cmd+W close, Cmd+Q quit)
+- Absorption complète de Caps Lock (Pro Tools ne l'utilise jamais)
+
+Pourquoi pas pynput sur Mac : son backend Darwin utilise `kCGEventTapOptionListenOnly`, donc son tap reçoit une copie des events indépendamment du chain de suppression. Sur macOS Tahoe (26+), construire un `NSEvent.eventWithCGEvent_` pour Caps Lock crashe dans `HIToolbox::TSMGetInputSourceProperty` → `dispatch_assert_queue` (SIGTRAP). Impossible de filtrer en amont, donc on remplace pynput entièrement.
+
+**Permission Accessibilité** : nécessaire pour que `CGEventTapCreate` réussisse. Réglages Système → Confidentialité et sécurité → **Accessibilité** ET **Surveillance des entrées**. Le hash du binaire change à chaque rebuild, donc à chaque nouvelle version il faut supprimer puis re-ajouter l'app dans les deux listes (jusqu'à passage en Developer ID signature).
+
+**Lancement obligatoire via LaunchServices** (`open /Applications/PTShortcuts.app` ou double-clic Finder). Lancer le binaire interne directement depuis Terminal contourne LaunchServices : le process est traité comme enfant de Terminal et n'hérite pas de la perm Accessibilité du `.app`.
+
+**Diagnostic Quartz** : `mac.py` log à stderr :
+- `[PTShortcuts] CGEventTap installed at session.` → tap actif
+- `[PTShortcuts] CGEventTapCreate(...) returned None.` → perm manquante / refusée
+- Fallback `kCGAnnotatedSessionEventTap` si `kCGSessionEventTap` échoue (macOS 26+ peut refuser sur les binaires ad-hoc-signés)
 
 ## Affichage dual (examen vs clavier)
 Les réponses (reveal, review, game over) montrent les deux notations via des constantes dans screens.py :
@@ -217,6 +234,30 @@ Appliqué uniquement quand `not IS_MAC` à 3 sites de rendu :
 - **Liens rapides** bas-droite : bouton ALP et bouton "Choose your vibe" via `webbrowser.open()`.
 - **Coming Soon** : certifs `{'210P', '205D', '210D'}` (constante `COMING_SOON` dans screens.py) — bouton JOUER grisé en mode classique, et entrées non-cochables (label "Soon") dans la checklist custom.
 - **Touches** : S → StatsScreen, L → LeaderboardScreen, C → toggle Mode Custom. Flèches/1-2-3 désactivées quand Mode Custom est actif.
+
+## Toggle "Sans pavé numérique"
+Petite case à cocher en bas-à-gauche du menu (au-dessus de "Effacer les données"), persistée dans `save.json` via `_no_numpad` (utilise `load_setting`/`save_setting` génériques de `state.py`).
+
+Quand activé, filtre les raccourcis impossibles sans numpad :
+- `loader.shortcut_requires_numpad(sc)` retourne True ssi LE chemin principal ET TOUS les alts requièrent une touche numpad
+- Si au moins un chemin (main ou alt) est numpad-free → shortcut conservé (l'utilisateur joue ce chemin, l'affichage montre toujours tous les variants)
+- Filtrage appliqué dans `GameScreen._build_custom_playlist()` (Mode Custom) et `GameScreen._next_shortcut()` (mode classique)
+
+Helper `_NUMPAD_KEY_NAMES` dans loader.py : `Num0`-`Num9`, `Num.`, `Num/`, `Num*`, `Num+`, `Num-`. La détection inspecte les `_detect_key_options` (chaque combo frozenset) et `_detect_steps` (pour key_sequence).
+
+## Rendu de texte sur macOS (set_alpha → BLEND_RGBA_MULT)
+`Surface.set_alpha()` sur les surfaces issues de `font.render(text, True, color)` est non-fiable sur macOS (SDL_ttf + Cocoa) : peut écraser l'alpha par-pixel et faire apparaître le texte comme un rectangle coloré opaque au lieu de glyphes transparents. Affecte les halos/ombres/glow et les crossfades de panels.
+
+Fix systématique : `renderer._scale_alpha(surf, alpha)` — crée une surface SRCALPHA remplie de `(255, 255, 255, alpha)` et la blit avec `BLEND_RGBA_MULT` sur la surface texte. Fiable cross-platform.
+
+Appliqué à :
+- `draw_text` shadow (renderer.py)
+- `draw_text_glow` glow loop
+- `draw_text_gradient` glow loop
+- `StatsScreen` notifications de succès
+- `MenuScreen` checkbox check anim, custom toggle overlay, crossfade snapshot du panel
+
+Ne **pas** introduire de nouveau `surf.set_alpha(...)` sur des surfaces texte — utiliser `_scale_alpha`. Pour les surfaces non-texte SRCALPHA, `set_alpha` marche, mais préférer `BLEND_RGBA_MULT` par défaut.
 
 ## Mode Custom (révision libre)
 Sandbox de révision configurable, qui remplace l'ancien Mode Révision. Activable depuis le menu (touche C ou bouton "Mode Custom").
@@ -317,13 +358,18 @@ Persistés dans save.json (merge des IDs existants pour préserver les timestamp
 
 ### Fonctionnalités
 - **Carrousel certif** : navigation gauche/droite (flèches clavier ou clic souris) entre toutes les certifications chargées. Animation slide + dots de position. Instancié avec `StatsScreen(certifications, initial_cert)` (reçoit le dict complet).
-- **Liste scrollable** : tous les raccourcis de la certif sélectionnée, triables par taux de réussite / vues / nom alphabétique.
-- **Barre de recherche** : champ texte à droite des boutons de tri. Filtre en temps réel sur `command_name`, `context`, `category`, `keys_win`, `keys_mac`. Quand active, les flèches gauche/droite ne naviguent plus entre certifs. Echap efface la requête, second Echap déselectionne le champ. Le résumé affiche `N/total raccourcis` quand un filtre est actif.
-- **Par ligne** (hauteur 62px) : nom de la commande, contexte tronqué à la largeur de colonne, catégorie, raccourcis Win (ACCENT_BLUE) · Mac (TEXT_DIM ou ACCENT_GREEN sur Mac).
+- **Liste scrollable groupée par Lesson** : chaque catégorie (= lesson) est un header cliquable avec chevron `▼/▶`. Clic sur le header → collapse / expand de la section. Le tri (taux / vues / nom) s'applique **à l'intérieur** de chaque lesson, l'ordre des lessons suit `category_names` du JSON.
+- **Barre de recherche** : champ texte à droite des boutons de tri. Filtre en temps réel sur `command_name`, `context`, `category`, `keys_win`, `keys_mac`. Les lessons sans résultat sont masquées (pas de header vide). Quand active, les flèches gauche/droite ne naviguent plus entre certifs. Echap efface la requête, second Echap déselectionne le champ. Le résumé affiche `N/total raccourcis` quand un filtre est actif.
+- **Par ligne shortcut** (hauteur 62px) : nom de la commande, contexte tronqué à la largeur de colonne, catégorie, raccourcis Win (ACCENT_BLUE) · Mac (TEXT_DIM ou ACCENT_GREEN sur Mac).
+- **Par ligne header** (hauteur 36px, constante `_LESSON_H`) : nom de la lesson, compte de raccourcis, chevron, bande accent ACCENT_BLUE à gauche.
 
 ### Architecture interne
-- `_rows` : liste triée complète ; `_display_rows` : liste filtrée par la recherche. `_clamp_scroll` et le rendu utilisent `_display_rows`.
-- `_apply_filter()` recalcule `_display_rows` depuis `_rows` + `_search_query`. Appelé par `_build_rows()` et à chaque frappe.
+- `_rows` : liste triée complète des shortcuts (avant groupage).
+- `_display_rows` : liste plate d'entries `{'type': 'header'|'item', 'cat': str, 'sc': dict|None, 'y': int, 'h': int}`. `y` est précalculé pour gérer les hauteurs variables (header 36px, item 62px). `_total_height` mis à jour.
+- `_collapsed` : dict `{cert_name: set(category_names collapsées)}` — persiste l'état lors du carrousel mais pas entre sessions.
+- `_header_rects` : dict `{cat_name: pygame.Rect}` rempli pendant le draw pour le hit testing du clic toggle.
+- `_apply_filter()` recalcule `_display_rows` depuis `_rows` + `_search_query` + `_collapsed`. Appelé par `_build_rows()`, à chaque frappe de recherche, et à chaque toggle de header.
+- `_draw_lesson_header()` rend la bande header avec chevron orienté selon l'état collapse.
 - `_fmt_keys(sc, field)` : formate les touches en texte compact (`Ctrl+Alt+C`, steps séparés par `>`).
 - **Piège** : certains champs JSON (`context`, `category`) peuvent être `null` → utiliser `sc.get('field') or ''` et non `sc.get('field', '')` (le défaut `''` n'est pas utilisé si la valeur est explicitement `None`).
 
@@ -354,7 +400,11 @@ Commande manuelle :
 python -m PyInstaller --onefile --windowed --name PTShortcuts --manifest ptshortcuts.manifest --add-data "shortcuts;shortcuts" --add-data "assets;assets" --add-data "supabase_config.json;." --hidden-import pynput.keyboard._win32 --hidden-import pynput.mouse._win32 main.py
 ```
 
-**macOS** : `bash build_mac.sh` — embarque `supabase_config.json` si présent + le dossier `assets/`. PyInstaller, pyobjc-framework-Quartz optionnel pour suppression Cmd.
+**macOS** : `bash build_mac.sh` — produit `dist/PTShortcuts.app` (vrai bundle Mac, PAS `--onefile`) + `dist/PTShortcuts.app.zip` prêt à distribuer (via `ditto -c -k --keepParent` pour préserver la structure du bundle). Codesign ad-hoc (`codesign --sign -`) appliqué automatiquement pour permettre le lancement depuis Finder. Embarque `supabase_config.json` si présent + le dossier `assets/`. Dépendances : `pygame-ce pynput pyinstaller pyobjc-framework-Cocoa pyobjc-framework-Quartz` — Quartz est OBLIGATOIRE sur Mac (CGEventTap = seule source d'input).
+
+PyInstaller flags Mac importants : `--collect-all Quartz --collect-all AppKit --collect-all objc` pour embarquer les sous-modules pyobjc, sinon le bundle plante au runtime sur `import Quartz`.
+
+**Distribution Mac** : envoyer le `.app.zip`. L'utilisateur dézippe, glisse dans `/Applications`, fait clic-droit → **Ouvrir** au premier lancement (Gatekeeper). Lancer ensuite via Finder ou `open /Applications/PTShortcuts.app` — **jamais** le binaire interne directement (perm Accessibilité ne s'appliquerait pas).
 
 **CI/CD** : `.github/workflows/build.yml` — déclenché sur push `main` ou tag `v*`. Crée une GitHub Release avec les deux binaires sur tag.
 Pour embarquer Supabase dans les releases CI, ajouter deux secrets GitHub (`Settings → Secrets → Actions`) :
