@@ -8,6 +8,25 @@ Outil de révision gamifié des raccourcis clavier Pro Tools, conçu à l'origin
 
 Windows + macOS · AZERTY et QWERTY supportés automatiquement · 100 % offline-first.
 
+---
+
+> ## 🧪 Version bêta — j'ai besoin de tes retours
+>
+> Ce projet est en **phase de bêta-test** : il est jouable et stable sur mes machines, mais beaucoup de configurations (claviers exotiques, versions de macOS, comportements bizarres avec certains raccourcis) n'ont pas encore été couvertes. Je compte sur les premiers utilisateurs pour faire remonter ce qui cloche.
+>
+> **Tu m'aides énormément si tu signales** :
+> - 🐛 Un raccourci qui ne se valide pas alors que tu as pressé les bonnes touches
+> - 💥 Un crash, un freeze, une erreur dans la console
+> - 🎨 Un truc moche, un texte qui dépasse, un bouton inactif
+> - 🤔 Un comportement qui te semble bizarre ou peu intuitif
+> - 💡 Une idée de fonctionnalité, un raccourci manquant, une certif à ajouter
+>
+> **Comment remonter un retour** :
+> - Préférable : ouvre une [issue sur GitHub](https://github.com/nqtimy/PTShortcuts/issues/new) — décris ce que tu faisais, ce qui s'est passé, ce que tu attendais. Capture d'écran bienvenue.
+> - Sinon : passe-moi le message directement à l'école ou via Discord.
+>
+> Toutes les contributions (retours, captures, suggestions) seront créditées dans les notes de version. Merci d'avance 🙏
+
 ![Menu principal](docs/screenshots/menu.png)
 *[Capture à ajouter]*
 
