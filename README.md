@@ -4,7 +4,7 @@
 
 *Made by **notimy** & **Claude** with ♥*
 
-Outil de révision gamifié des raccourcis clavier Pro Tools, conçu à l'origine pour les étudiants de l'**école Acoustik à Montpellier** préparant les certifications Avid (101 → 210). Style Cookie Clicker : score, combo, pouvoirs, achievements, leaderboard en ligne.
+Outil de révision gamifié des raccourcis clavier Pro Tools, conçu à l'origine pour les étudiants de l'**école Acoustik à Montpellier** préparant les certifications Avid (101 → 210D). Style Cookie Clicker : score, combo, pouvoirs, achievements, leaderboard en ligne.
 
 Windows + macOS · AZERTY et QWERTY supportés automatiquement · 100 % offline-first.
 
