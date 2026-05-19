@@ -182,8 +182,12 @@ Pour les touches OEM (=, -, /, etc.) non couvertes par la table de scan codes, l
 
 Sur Mac, `keyboard/mac.py` utilise les **VK codes** (kVK_ANSI_*) via `_MAC_VK_TO_QWERTY` pour le même résultat indépendant du layout.
 
-## Capture clavier et suppression touche Win (Windows) / Cmd (Mac)
-**Windows** : pynput pour la capture standard + hook `WH_KEYBOARD_LL` séparé (`SetWindowsHookExW` via ctypes) qui intercepte la touche Win avant l'OS. Quand la fenêtre est au premier plan : Win supprimée, état géré dans `pressed_modifiers`. `Win+L` impossible à bloquer (kernel).
+## Capture clavier et suppression touche Win / Alt+Tab (Windows) / Cmd (Mac)
+**Windows** : pynput pour la capture standard + hook `WH_KEYBOARD_LL` séparé (`SetWindowsHookExW` via ctypes) qui intercepte la touche Win et `Alt+Tab` avant l'OS. Quand la fenêtre est au premier plan :
+- **Touche Win** supprimée, état géré dans `pressed_modifiers` directement depuis le callback. `Win+L` impossible à bloquer (kernel).
+- **Alt+Tab / Ctrl+Alt+Tab** supprimés pour que Pro Tools puisse utiliser ses raccourcis `Tab to Transients` (101/130) sans que Windows vole le focus. Le hook lit l'état physique d'Alt via `GetAsyncKeyState(VK_MENU)` (synchrone, évite la race avec le thread pynput), et si Alt est tenu lors d'un keydown Tab, le hook ajoute manuellement `Tab` aux `pressed_keys` + construit le combo, puis retourne 1 pour swallow l'event.
+
+Le callback met en cache `GetForegroundWindow()` une fois par event (Win et Tab partagent la même check).
 
 Ne pas modifier la logique Win32 sans bien comprendre les types ctypes 64-bit (`WINFUNCTYPE`, `HMODULE`, `HHOOK`, cast `c_void_p`).
 
@@ -249,7 +253,21 @@ Quand activé, filtre les raccourcis impossibles sans numpad :
 - Si au moins un chemin (main ou alt) est numpad-free → shortcut conservé (l'utilisateur joue ce chemin, l'affichage montre toujours tous les variants)
 - Filtrage appliqué dans `GameScreen._build_custom_playlist()` (Mode Custom) et `GameScreen._next_shortcut()` (mode classique)
 
-Helper `_NUMPAD_KEY_NAMES` dans loader.py : `Num0`-`Num9`, `Num.`, `Num/`, `Num*`, `Num+`, `Num-`. La détection inspecte les `_detect_key_options` (chaque combo frozenset) et `_detect_steps` (pour key_sequence).
+Helper `_NUMPAD_KEY_NAMES` dans loader.py : `Num0`-`Num9`, `Num.`, `Num/`, `Num*`, `Num+`, `Num-`, `Num Enter`. La détection inspecte les `_detect_key_options` (chaque combo frozenset) et `_detect_steps` (pour key_sequence).
+
+## Distinction Entrée clavier / Enter pavé numérique
+Le clavier principal et le pavé numérique ont chacun leur propre touche Enter — Pro Tools les traite séparément. Conventions internes :
+- **`Enter`** = Entrée du clavier principal (Return Mac / Enter Win principal)
+- **`Num Enter`** = Enter du pavé numérique
+
+Côté handlers :
+- `mac.py:_MAC_VK_NUMPAD` : `0x4C: 'Num Enter'` (kVK_ANSI_KeypadEnter), tandis que `_MAC_VK_SPECIAL` garde `0x24: 'Enter'` (kVK_Return).
+- `win.py:_win32_filter` : `vk == 0x0D && extended` → `'Num Enter'`. Le flag extended (E0 prefix) distingue le numpad Enter du Enter principal côté Windows.
+
+Côté loader (`_KEY_MAP`) :
+- `'Return'` → `'Enter'` : permet aux entrées JSON `keys_mac: ["Return"]` (notation Avid Mac) de matcher l'output handler.
+
+Côté JSON, utiliser **`Num Enter`** (avec espace) pour les raccourcis qui exigent le pavé numérique (`Create Memory Location` en 110, `New Memory Location` en 130, etc.). Le filtre « Sans pavé numérique » les masquera automatiquement via `_NUMPAD_KEY_NAMES`.
 
 ## Rendu de texte sur macOS (set_alpha → BLEND_RGBA_MULT)
 `Surface.set_alpha()` sur les surfaces issues de `font.render(text, True, color)` est non-fiable sur macOS (SDL_ttf + Cocoa) : peut écraser l'alpha par-pixel et faire apparaître le texte comme un rectangle coloré opaque au lieu de glyphes transparents. Affecte les halos/ombres/glow et les crossfades de panels.
@@ -331,6 +349,37 @@ play_color   = _lc(ACCENT_GREEN, page_accent, rmt)  # bouton JOUER
 ### Hover fades
 Pattern commun : `hover_t += (target - hover_t) * _lf(0.14, dt)` chaque frame.
 Les couleurs de fond/bordure/texte sont interpolées avec `_lc()`.
+
+## Feedback in-game : ancrage, preview live, ondulations
+
+### Ancrage des popups/particules (`GameScreen._effect_anchor`)
+Les events de réussite/raté (popups `+points` / `RATÉ`, particules, ondulation) ne spawn plus à une position d'écran fixe. `_effect_anchor(click_pos=None, jitter=True)` retourne :
+- `click_pos` si fourni (passé par `_do_correct` / `_do_wrong` depuis le handler `modifier_click`)
+- sinon une position aléatoire dans le rectangle de la carte « APPUYEZ SUR » (capturé chaque frame dans `self._answer_card_rect`)
+- sinon (rare, première frame) un fallback en haut de l'écran
+
+Les call sites `handle_event` du `modifier_click` passent `at=event.pos` aux quatre branches (correct/wrong × main/alt) pour que le feedback colle au curseur. Les autres chemins n'envoient rien → jitter dans la carte.
+
+### Preview live des touches pressées (`GameScreen._get_live_preview_keys`)
+Quand le shortcut n'est pas révélé, les 3 cases `?` au centre de la carte « APPUYEZ SUR » sont remplacées en temps réel par les touches actuellement maintenues. La méthode lit `self.kbd.get_current_keys()` (verrouillé pour thread-safety), trie selon `MODIFIER_ORDER` (Ctrl/Shift/Alt/Win) puis les non-modificateurs triés alpha. Les noms sont QWERTY positionnels (pas traduits AZERTY) pour correspondre à ce que Pro Tools reçoit réellement.
+
+Si aucune touche n'est tenue, fallback sur les 3 keycaps `?`.
+
+### Ondulations en arrière-plan (`Ripple` dans particles.py)
+Une ondulation « goutte d'eau » est émise pour **chaque réponse correcte** (pas pour les ratés — abandonné car peu visible avec le flash rouge plein écran qui le masquait). Rendu : un seul `pygame.draw.circle` avec width=N par frame, couleur fade vers noir via la courbe alpha (le BG sombre absorbe — pas de blit SRCALPHA nécessaire).
+
+`spawn_ripple(x, y, color, intensity)` — l'intensité (0.5–4.0) scale rayon max, lifetime et thickness. Mapping combo dans `_do_correct` :
+- combo < 5 → intensity 0.9 (vert, ~457px)
+- combo 5–9 → 1.4 (doré, ~522px)
+- combo 10–14 → 2.0 (doré, ~600px)
+- combo 15–24 → 2.8 (~704px)
+- combo 25+ → 4.0 (~860px, couvre toute la largeur)
+
+Stocké dans `GameScreen.ripples`, séparé de `self.particles` pour le z-order — dessiné **tôt dans `draw()`** (juste après le halo radial, avant le top bar et les cards) via `renderer.draw_ripples()`. Cap FIFO à `MAX_RIPPLES = 6` (config.py) pour borner le pire cas en cas de spam.
+
+### Constantes liées
+- `MAX_RIPPLES = 6` (config.py) — cap ondulations actives
+- `MODIFIER_ORDER = ('Ctrl', 'Shift', 'Alt', 'Win')` (config.py) — ordre canonique pour preview + futur usage
 
 ## Concepts clés
 - **Score** : repart à 0 chaque partie. Upgrades achetés et catégories débloquées persistent via save.json.
