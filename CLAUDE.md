@@ -29,7 +29,13 @@ game/
   leaderboard.py     → Highscore local + Supabase REST async (offline-first)
   particles.py       → Système de particules et popups flottants
   renderer.py        → Fonctions de rendu pygame (texte, boutons, barres, keycaps)
-  screens.py         → MenuScreen, GameScreen, StatsScreen, LeaderboardScreen
+  screens/           → Package des écrans (anciennement screens.py monolithique)
+    __init__.py      → Re-exporte MenuScreen, GameScreen, StatsScreen, LeaderboardScreen
+    _shared.py       → Constantes/helpers partagés (_lc, _lf, _DBLCLICK_THRESHOLD, AZERTY display, CERT_ORDER, etc.)
+    menu.py          → MenuScreen (carrousel, pills, Mode Custom, animations)
+    game_screen.py   → GameScreen + _KB_ROWS/_NUMPAD_KEYS layout data
+    stats.py         → StatsScreen
+    leaderboard.py   → LeaderboardScreen
 shortcuts/
   *.json             → Raccourcis par certification (101, 110, 130, 201, 210M, 210P, 205D, 210D)
 assets/
@@ -151,7 +157,7 @@ Raccourcis CKF = key_sequence 2 étapes : `[["Ctrl", "Alt", "1"], ["lettre"]]`
 - Le contexte doit mentionner explicitement "Keyboard Focus Mode" pour aider l'utilisateur
 - Après step 0, le joueur peut relâcher Ctrl+Alt avant de presser step 1 (clear() automatique)
 
-### Détection key_sequence (screens.py)
+### Détection key_sequence (screens/game_screen.py)
 `GameScreen._seq_step` track l'étape courante, reset à 0 sur `_next_shortcut()` et sur erreur.
 Pour les absorb steps : `peek_last_combo()` (non-destructif) + `consume_last_combo()` — vérifie l'end marker en priorité, sinon accepte le digit et reste sur l'étape.
 
@@ -199,7 +205,7 @@ Pourquoi pas pynput sur Mac : son backend Darwin utilise `kCGEventTapOptionListe
 - Fallback `kCGAnnotatedSessionEventTap` si `kCGSessionEventTap` échoue (macOS 26+ peut refuser sur les binaires ad-hoc-signés)
 
 ## Affichage dual (examen vs clavier)
-Les réponses (reveal, review, game over) montrent les deux notations via des constantes dans screens.py :
+Les réponses (reveal, review, game over) montrent les deux notations via des constantes dans screens/_shared.py :
 ```python
 if IS_MAC:
     _LABEL_SMALL = "Reference Windows"; _LABEL_BIG = "Ton clavier (Mac)"
@@ -214,7 +220,7 @@ else:
 ### Traduction QWERTY → AZERTY pour l'affichage (Windows uniquement)
 Les `keys_win` des JSON sont en notation QWERTY positionnelle (ce que la détection scan-code attend). Mais le label "Ton clavier (AZERTY)" promet à l'utilisateur le caractère qu'il voit imprimé sur sa touche. Sans traduction, on affiche `Ctrl+Alt+M` alors que le joueur AZERTY voit `,` à cette position.
 
-Helpers dans `screens.py` (juste après les constantes `_KEYS_BIG`) :
+Helpers dans `screens/_shared.py` (juste après les constantes `_KEYS_BIG`) :
 - `_QWERTY_TO_AZERTY_DISPLAY` : dict de mapping (Q→A, W→Z, A→Q, Z→W, M→`,`, `;`→M, `'`→ù, `,`→`;`, `.`→`:`, `/`→`!`, `[`→^, `]`→$, `\`→`*`, `` ` ``→², `-`→`)`, `=`→`=`)
 - `_to_azerty_display(keys)` : transforme une liste plate, garde modifiers/F-keys/numpad/digits inchangés
 - `_to_azerty_display_seq(steps)` : version key_sequence (liste de listes)
@@ -227,12 +233,12 @@ Appliqué uniquement quand `not IS_MAC` à 3 sites de rendu :
 **La détection n'est jamais affectée** : elle continue d'utiliser les noms QWERTY positionnels via scan codes. La traduction est purement cosmétique pour le rendu sur le côté "Ton clavier (AZERTY)".
 
 ## Menu principal
-- **Carrousel certification** (mode classique) : navigation gauche/droite entre les certifs (CERT_ORDER dans screens.py). Animation slide (position/target lerp, ±110px) + mini bar-chart difficulté dans la carte.
+- **Carrousel certification** (mode classique) : navigation gauche/droite entre les certifs (CERT_ORDER dans screens/_shared.py). Animation slide (position/target lerp, ±110px) + mini bar-chart difficulté dans la carte.
 - **Pills difficulté** (mode classique) : 3 boutons cliquables (Facile/Interm./Difficile) avec hover fade. Raccourcis clavier 1/2/3 pour changer directement.
 - **Mode Custom** (toggle touche C ou clic) : remplace carrousel + pills par un panneau d'options + checklist de certifs. Voir section dédiée plus bas.
 - **Pseudo** : champ saisie bas-gauche, persisté dans save.json, utilisé pour le leaderboard.
 - **Liens rapides** bas-droite : bouton ALP et bouton "Choose your vibe" via `webbrowser.open()`.
-- **Coming Soon** : certifs `{'210P', '205D', '210D'}` (constante `COMING_SOON` dans screens.py) — bouton JOUER grisé en mode classique, et entrées non-cochables (label "Soon") dans la checklist custom.
+- **Coming Soon** : certifs `{'210P', '205D', '210D'}` (constante `COMING_SOON` dans screens/_shared.py) — bouton JOUER grisé en mode classique, et entrées non-cochables (label "Soon") dans la checklist custom.
 - **Touches** : S → StatsScreen, L → LeaderboardScreen, C → toggle Mode Custom. Flèches/1-2-3 désactivées quand Mode Custom est actif.
 
 ## Toggle "Sans pavé numérique"
@@ -291,7 +297,7 @@ Quand l'utilisateur clique JOUER en mode custom, `MenuScreen._commit_selection()
 - **Banner** : "CUSTOM N/total" affiché dans le top bar à la place du nom de catégorie.
 
 ## Système d'animation du menu (MenuScreen)
-Toutes les animations vivent dans `MenuScreen` (screens.py), pas de thread séparé.
+Toutes les animations vivent dans `MenuScreen` (screens/menu.py), pas de thread séparé.
 
 ### État persistant dans `__init__`
 - `_waveform_phases/speeds` : 40 flottants pour le spectrum analyzer
@@ -319,7 +325,7 @@ page_accent  = _lc(ACCENT_BLUE, ACCENT_RED, rmt)   # titre, carte, flèches, dot
 page_accent2 = _lc(ACCENT_PURPLE, ACCENT_ORANGE, rmt)  # fin du gradient waveform
 play_color   = _lc(ACCENT_GREEN, page_accent, rmt)  # bouton JOUER
 ```
-`_lc(c1, c2, t)` et `_lf(k, dt)` sont des helpers module-level dans screens.py.
+`_lc(c1, c2, t)` et `_lf(k, dt)` sont des helpers module-level dans screens/_shared.py.
 `_lf(k, dt) = 1.0 - (1.0 - k) ** (dt * 60.0)` — lerp frame-rate independent.
 
 ### Hover fades
@@ -332,7 +338,7 @@ Les couleurs de fond/bordure/texte sont interpolées avec `_lc()`.
 - **Timer** : diminue avec le niveau. Quand il expire → game over (pas juste skip). En Mode Custom → skip (pas de game over).
 - **Difficulté 3** : n'apparaît qu'après 200pts (DIFF3_UNLOCK_SCORE dans config.py).
 - **Poids adaptatifs** : `get_weighted_shortcuts()` dans loader.py ajuste le weight selon le taux de réussite. `factor = max(0.3, 2.0 - 1.7 * rate)` — les raccourcis ratés apparaissent plus souvent.
-- **Freeze timer** : fonctionne en poussant timer_start en avant de dt chaque frame (dans screens.py update).
+- **Freeze timer** : fonctionne en poussant timer_start en avant de dt chaque frame (dans screens/game_screen.py update).
 - **Pavé numérique + modificateurs** : deux comportements Windows à gérer dans `keyboard/win.py` :
   1. Quand Shift/Ctrl est tenu avec NumLock ON, Windows substitue le VK de navigation au VK numpad. Fix : `_win32_filter` lit `data.vkCode` brut via `_VK_TO_NUMPAD` / `_NAV_VK_TO_NUMPAD` (extended=False).
   2. Windows génère un faux Shift-up/down driver-level avant/après chaque touche numpad. Fix : détection par scan code — vrai Shift a `scan=0x2A` (gauche) ou `0x36` (droit) ; le faux a `scan=0x22A`.
@@ -353,7 +359,7 @@ Persistés dans save.json (merge des IDs existants pour préserver les timestamp
 - Supabase REST via `urllib.request` (stdlib uniquement, aucune dépendance externe).
 - `LeaderboardScreen` : deux colonnes (highscores locaux par difficulté + top-10 global), bouton refresh.
 
-## Stats (screens.py → StatsScreen)
+## Stats (screens/stats.py → StatsScreen)
 Écran de référence complet, accessible depuis le menu (touche S).
 
 ### Fonctionnalités
@@ -373,14 +379,14 @@ Persistés dans save.json (merge des IDs existants pour préserver les timestamp
 - `_fmt_keys(sc, field)` : formate les touches en texte compact (`Ctrl+Alt+C`, steps séparés par `>`).
 - **Piège** : certains champs JSON (`context`, `category`) peuvent être `null` → utiliser `sc.get('field') or ''` et non `sc.get('field', '')` (le défaut `''` n'est pas utilisé si la valeur est explicitement `None`).
 
-## Clavier visuel (screens.py → GameScreen._draw_keyboard)
+## Clavier visuel (screens/game_screen.py → GameScreen._draw_keyboard)
 Layout QWERTY Mac en 5 rangées (`_KB_ROWS`), unités de largeur proportionnelles.
 `highlight_keys` (bleu) = touches pressées, `expected_keys` (vert/violet) = réponse attendue en review.
 `_get_expected_keys()` retourne les touches de l'étape courante pour key_sequence.
 
 ## Ajout d'un nouveau module de certification
 Déposer un fichier JSON dans `shortcuts/` avec la structure `keys_mac`/`keys_win`/`input_type` (voir 210M.json).
-L'ordre d'affichage est défini dans `CERT_ORDER` (screens.py). Les certifs non listées apparaissent après, par ordre alphabétique.
+L'ordre d'affichage est défini dans `CERT_ORDER` (screens/_shared.py). Les certifs non listées apparaissent après, par ordre alphabétique.
 
 ## Polices embarquées (assets/)
 Le dossier `assets/` contient les TTF utilisés par `renderer.get_font()` :

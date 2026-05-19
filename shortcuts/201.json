@@ -498,13 +498,12 @@
         },
         {
           "command_name": "Edit Memory Location",
-          "context": "Open the Edit Memory Location dialog box by number (numeric keypad).",
-          "keys_mac": [["Num."], ["AnyDigit"], ["Enter"]],
-          "keys_win": [["Num."], ["AnyDigit"], ["Enter"]],
-          "difficulty": 3,
-          "input_type": "key_sequence",
-          "weight": 3,
-          "absorb_steps": [1]
+          "context": "Open the Edit Memory Location dialog box for a marker in the Memory Locations window.",
+          "keys_mac": ["Command", "Click"],
+          "keys_win": ["Ctrl", "Click"],
+          "difficulty": 2,
+          "input_type": "modifier_click",
+          "weight": 5
         }
       ]
     },

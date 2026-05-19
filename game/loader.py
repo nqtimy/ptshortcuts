@@ -48,6 +48,10 @@ _MODIFIERS = {'Ctrl', 'Shift', 'Alt', 'Win', 'Start'}
 
 _KEY_MAP = {
     'Start': 'Win',
+    # Mac's main keyboard "Return" key is emitted as "Enter" by the macOS
+    # handler (mac.py maps both kVK_Return and kVK_ANSI_KeypadEnter to Enter),
+    # so the JSON name "Return" must normalize to "Enter" to ever match.
+    'Return': 'Enter',
 }
 
 
@@ -292,7 +296,8 @@ def load_certifications():
 
 
 _NUMPAD_KEY_NAMES = (
-    {f'Num{i}' for i in range(10)} | {'Num.', 'Num/', 'Num*', 'Num+', 'Num-'}
+    {f'Num{i}' for i in range(10)}
+    | {'Num.', 'Num/', 'Num*', 'Num+', 'Num-', 'Num Enter'}
 )
 
 

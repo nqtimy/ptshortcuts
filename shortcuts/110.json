@@ -75,8 +75,8 @@
         {
           "command_name": "Create Memory Location",
           "context": "Create a new Memory Location at the current position (numeric keypad).",
-          "keys_mac": ["Enter"],
-          "keys_win": ["Enter"],
+          "keys_mac": ["Num Enter"],
+          "keys_win": ["Num Enter"],
           "difficulty": 1,
           "input_type": "single_key",
           "weight": 8

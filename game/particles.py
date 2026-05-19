@@ -72,6 +72,45 @@ class RingParticle:
         return self.max_radius * (1.0 - (1.0 - p) ** 3)
 
 
+class Ripple:
+    """Single expanding water-drop ring drawn behind the UI cards.
+
+    Used as ambient feedback for correct answers — one ripple per event, color
+    and intensity driven by the current combo. Cheap to render: just one
+    `pygame.draw.circle` per frame with a width=N outline, color faded toward
+    black via the alpha curve (no SRCALPHA blit required).
+    """
+    __slots__ = ('x', 'y', 'color', 'birth', 'lifetime', 'max_radius', 'thickness')
+
+    def __init__(self, x, y, color, max_radius=380, lifetime=1.3, thickness=4):
+        self.x = x
+        self.y = y
+        self.color = color
+        self.birth = time.time()
+        self.lifetime = lifetime
+        self.max_radius = max_radius
+        self.thickness = thickness
+
+    def alive(self, now):
+        return (now - self.birth) < self.lifetime
+
+    def update(self, dt):
+        pass  # purely time-driven; no per-frame state
+
+    def progress(self, now):
+        return min(1.0, (now - self.birth) / self.lifetime)
+
+    def radius(self, now):
+        # Ease-out: ripple expands fast, then slows — water-drop feel.
+        p = self.progress(now)
+        return self.max_radius * (1.0 - (1.0 - p) ** 2.5)
+
+    def alpha(self, now):
+        # Hold full opacity briefly, then quadratic fade.
+        p = self.progress(now)
+        return max(0.0, 1.0 - p * p)
+
+
 class ScorePopup:
     """Floating score text that scales down from big."""
     __slots__ = ('text', 'x', 'y', 'color', 'birth', 'lifetime', 'vy',
@@ -195,6 +234,21 @@ def spawn_embers(x, y, w, count=3):
             gravity=-15, friction=0.99, glow=True
         ))
     return particles
+
+
+def spawn_ripple(x, y, color, intensity=1.0):
+    """Single water-drop ripple, scaled by combo intensity.
+
+    intensity ~ 0.9 (light) → 4.0 (combo 25+, full-screen). Affects max radius,
+    lifetime, and stroke thickness so high-combo ripples feel "heavier".
+    """
+    intensity = max(0.5, min(intensity, 4.0))
+    return Ripple(
+        x, y, color,
+        max_radius=int(340 + 130 * intensity),  # intensity 4.0 → 860px
+        lifetime=0.95 + 0.35 * intensity,
+        thickness=max(2, int(2 + intensity)),
+    )
 
 
 def spawn_wrong_burst(x, y, count=15):

@@ -437,7 +437,7 @@
           ],
           "keys_win": [
             "Start",
-            "*"
+            "\\"
           ],
           "difficulty": 1,
           "input_type": "key_combo",
@@ -454,7 +454,7 @@
           "keys_win": [
             "Ctrl",
             "Start",
-            "*"
+            "\\"
           ],
           "difficulty": 2,
           "input_type": "key_combo",
@@ -788,7 +788,7 @@
           "keys_win": [
             "Alt",
             "Shift",
-            "\""
+            "3"
           ],
           "difficulty": 2,
           "input_type": "key_combo",
@@ -808,7 +808,7 @@
           ],
           "keys_win": [
             "Alt",
-            "a"
+            "0"
           ],
           "difficulty": 1,
           "input_type": "key_combo",
@@ -1017,12 +1017,14 @@
           "command_name": "Increase/Decrease Grid Value",
           "context": "Incrementally increase or decrease the Grid value.",
           "keys_mac": [
-            "Shift",
-            "Minus/Equals"
+            "Control",
+            "Option",
+            "Num+/Num-"
           ],
           "keys_win": [
-            "Shift",
-            ")/="
+            "Start",
+            "Alt",
+            "Num+/Num-"
           ],
           "difficulty": 1,
           "input_type": "key_combo",
@@ -1287,7 +1289,7 @@
           ],
           "keys_win": [
             "Shift",
-            "!"
+            "/"
           ],
           "difficulty": 1,
           "input_type": "key_combo",
@@ -1446,7 +1448,7 @@
           "keys_win": [
             "Ctrl",
             "Alt",
-            "!"
+            "/"
           ],
           "difficulty": 2,
           "input_type": "key_combo",

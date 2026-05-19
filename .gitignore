@@ -29,8 +29,12 @@ supabase_config.json
 *.key
 
 # --- Claude Code ---
-.claude/settings.local.json
-.claude/worktrees/
+.claude/
+.agents/
+skills-lock.json
+
+# --- Local backups ---
+*_backup.py
 
 # --- OS ---
 .DS_Store

@@ -28,12 +28,18 @@ _user32.CallNextHookEx.argtypes = [
     ctypes.wintypes.HHOOK, ctypes.c_int, ctypes.wintypes.WPARAM, ctypes.wintypes.LPARAM,
 ]
 _user32.GetForegroundWindow.restype = ctypes.wintypes.HWND
+_user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+_user32.GetAsyncKeyState.restype = ctypes.c_short
 
-# Low-level keyboard hook for Win key suppression
+# Low-level keyboard hook for Win / Alt+Tab suppression
 _WH_KEYBOARD_LL = 13
 _WM_KEYDOWN = 0x0100
+_WM_KEYUP = 0x0101
 _WM_SYSKEYDOWN = 0x0104
+_WM_SYSKEYUP = 0x0105
 _WIN_VK_SET = {0x5B, 0x5C}  # VK_LWIN, VK_RWIN
+_VK_TAB = 0x09
+_VK_MENU = 0x12   # Alt (either side)
 
 
 class _KBDLLHOOKSTRUCT(ctypes.Structure):
@@ -241,15 +247,42 @@ class KeyboardHandler(BaseKeyboardHandler):
             if nCode >= 0:
                 data = ctypes.cast(lParam, ctypes.POINTER(_KBDLLHOOKSTRUCT))
                 vk = data.contents.vkCode
-                if vk in _WIN_VK_SET and self._game_hwnd:
-                    if _user32.GetForegroundWindow() == self._game_hwnd:
+                # Cache the foreground window once per event — both Win and Tab
+                # paths need it, and the call isn't free.
+                game_focused = (
+                    self._game_hwnd
+                    and _user32.GetForegroundWindow() == self._game_hwnd
+                )
+                if vk in _WIN_VK_SET and game_focused:
+                    is_down = wParam in (_WM_KEYDOWN, _WM_SYSKEYDOWN)
+                    with self.lock:
+                        if is_down:
+                            self.pressed_modifiers.add('Win')
+                        else:
+                            self.pressed_modifiers.discard('Win')
+                    return 1  # Suppress — don't pass to next hook / OS
+
+                # Alt+Tab / Ctrl+Alt+Tab suppression: Windows steals focus when
+                # Tab arrives while Alt is held. Swallow Tab and update our state
+                # ourselves so the shortcut still registers in-game.
+                # GetAsyncKeyState reads physical key state synchronously, side-
+                # stepping the race with pynput's listener thread.
+                if vk == _VK_TAB and game_focused:
+                    alt_down = bool(_user32.GetAsyncKeyState(_VK_MENU) & 0x8000)
+                    if alt_down:
                         is_down = wParam in (_WM_KEYDOWN, _WM_SYSKEYDOWN)
+                        is_up = wParam in (_WM_KEYUP, _WM_SYSKEYUP)
+                        now = time.time()
                         with self.lock:
                             if is_down:
-                                self.pressed_modifiers.add('Win')
-                            else:
-                                self.pressed_modifiers.discard('Win')
-                        return 1  # Suppress — don't pass to next hook / OS
+                                self.pressed_keys.add('Tab')
+                                combo = frozenset(self.pressed_modifiers | {'Tab'})
+                                self._last_combo = combo
+                                self._combo_time = now
+                                self.events.append((now, 'combo', combo))
+                            elif is_up:
+                                self.pressed_keys.discard('Tab')
+                        return 1
             return _user32.CallNextHookEx(0, nCode, wParam, lParam)
 
         self._win_hook_cb = _HOOKPROC(_hook_proc)  # prevent GC
@@ -311,7 +344,11 @@ class KeyboardHandler(BaseKeyboardHandler):
         _REAL_SHIFT_SCANS = {0x2A, 0x36}
         self._current_injected = (vk in _SHIFT_VKS and sc not in _REAL_SHIFT_SCANS)
 
-        if vk in _VK_TO_NUMPAD:
+        if vk == 0x0D and extended:
+            # Numpad Enter sends VK_RETURN with the extended flag set (E0 prefix),
+            # while the main keyboard Return has extended=False. Distinguish them.
+            self._current_key_name = 'Num Enter'
+        elif vk in _VK_TO_NUMPAD:
             # Numpad VK codes are unambiguous (NumLock ON, no modifier override)
             self._current_key_name = _VK_TO_NUMPAD[vk]
         elif not extended and vk in _NAV_VK_TO_NUMPAD:

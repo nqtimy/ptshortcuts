@@ -167,6 +167,10 @@ PARTICLES_WRONG = 15
 PARTICLES_MILESTONE = 120
 PARTICLES_EMBER_RATE = 3
 MAX_PARTICLES = 400
+MAX_RIPPLES = 6  # background water-ripple cap (FIFO when exceeded)
+
+# Canonical modifier order for display & ordering (must match keyboard handlers)
+MODIFIER_ORDER = ('Ctrl', 'Shift', 'Alt', 'Win')
 
 # Combo milestones (firework ring at these values)
 COMBO_MILESTONES = {5, 10, 15, 20, 25, 30, 50}

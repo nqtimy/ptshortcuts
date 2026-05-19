@@ -93,6 +93,7 @@ _MAC_VK_NUMPAD = {
     0x56: 'Num4', 0x57: 'Num5', 0x58: 'Num6', 0x59: 'Num7',
     0x5B: 'Num8', 0x5C: 'Num9',
     0x41: 'Num.', 0x4B: 'Num/', 0x43: 'Num*', 0x4E: 'Num-', 0x45: 'Num+',
+    0x4C: 'Num Enter',  # kVK_ANSI_KeypadEnter — distinct from main Return (0x24)
 }
 
 # Cmd VK codes (for suppression)
@@ -115,7 +116,7 @@ _MAC_VK_MODIFIERS = {
 
 # Non-character special keys (everything that isn't a letter/digit/numpad).
 _MAC_VK_SPECIAL = {
-    0x31: 'Space', 0x24: 'Enter', 0x4C: 'Enter',
+    0x31: 'Space', 0x24: 'Enter',
     0x30: 'Tab', 0x33: 'Backspace', 0x75: 'Delete', 0x35: 'Escape',
     0x73: 'Home', 0x77: 'End', 0x74: 'PageUp', 0x79: 'PageDown',
     0x7B: 'Left', 0x7C: 'Right', 0x7D: 'Down', 0x7E: 'Up',

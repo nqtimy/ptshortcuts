@@ -489,6 +489,27 @@ def draw_combo_text(surface, combo, cx, cy):
                   shadow=True)
 
 
+def draw_ripples(surface, ripples):
+    """Render background ripples (water-drop expanding rings).
+
+    Called early in the draw pipeline so ripples sit behind the UI cards.
+    Cheap: a single `pygame.draw.circle` outline per ripple, faded by lerping
+    the color toward black (the dark BG absorbs it naturally — no SRCALPHA blit).
+    """
+    now = time.time()
+    draw_circle = pygame.draw.circle
+    for r in ripples:
+        a = r.alpha(now)
+        if a <= 0.0:
+            continue
+        radius = int(r.radius(now))
+        if radius < 2:
+            continue
+        col = (int(r.color[0] * a), int(r.color[1] * a), int(r.color[2] * a))
+        width = min(radius, max(1, int(r.thickness * (0.6 + 0.4 * a))))
+        draw_circle(surface, col, (int(r.x), int(r.y)), radius, width)
+
+
 def draw_particles(surface, particles):
     """Render particles with glow effect for bright ones."""
     now = time.time()
