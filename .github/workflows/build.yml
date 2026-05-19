@@ -127,12 +127,32 @@ jobs:
           name: PTShortcuts-mac
           path: artifacts/
 
+      - name: Checkout repo for release notes
+        uses: actions/checkout@v4
+        with:
+          path: src
+
+      - name: Resolve release notes file
+        id: notes
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          NOTES="src/docs/RELEASE_NOTES_${TAG}.md"
+          if [ -f "$NOTES" ]; then
+            echo "path=$NOTES" >> "$GITHUB_OUTPUT"
+            echo "Using custom release notes: $NOTES"
+          else
+            echo "path=" >> "$GITHUB_OUTPUT"
+            echo "No custom notes file found at $NOTES — falling back to auto-generated"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             artifacts/PTShortcuts.exe
             artifacts/PTShortcuts-mac.zip
-          generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}
           draft: false
           prerelease: false
